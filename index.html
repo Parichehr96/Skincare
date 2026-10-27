@@ -1,0 +1,1034 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Skincare Choices Survey</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one narrow column, one question per screen; sticky progress on top, action bar at the bottom. */
+:root {
+  /* One light theme: white ground, pastel green and blue for the design. */
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --ink: #1f2d35;
+  --muted: #5b6b73;
+  --line: #d8e3e8;
+  --accent: #2c7a6a;        /* buttons and selected states (readable with white text) */
+  --accent-ink: #ffffff;
+  --accent-soft: #e1f3ea;   /* pastel green */
+  --green-mid: #9fd6bd;
+  --blue: #7fb2e5;
+  --blue-soft: #e1eefb;     /* pastel blue */
+  --sun: #f3d27a;           /* soft butter yellow, only for the sun and stars */
+  --sun-soft: #e1eefb;
+  --blush: #f6ddd8;
+  --cream: #f6faf8;
+  --tone: #a86f4c;
+  --warn: #9a5a12;
+  --shadow: none;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --r: 18px;
+  color-scheme: light;
+}
+
+html { box-sizing: border-box; height: 100%; }
+body { height: 100%; overflow: hidden; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-tap-highlight-color: transparent;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+
+.app { max-width: 560px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
+
+/* Top bar */
+.bar {
+  position: relative; z-index: 5; background: var(--bg); flex: none;
+  display: flex; flex-direction: column; gap: 10px; padding-block: 16px 10px;
+}
+.barrow { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; }
+.about {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 4px 14px 4px 4px; border-radius: 99px; border: 1.5px solid var(--line); background: var(--surface); font-size: 14px;
+  animation: inF .3s ease-out;
+}
+.about svg { width: 30px; height: 30px; }
+.about b { font-weight: 700; }
+.about .chg { color: var(--accent); font-weight: 700; }
+.about:hover { border-color: var(--accent); }
+.bar[hidden] { display: none !important; }
+.icon-btn {
+  width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer;
+}
+.icon-btn:hover { background: var(--accent-soft); }
+.icon-btn svg { width: 22px; height: 22px; stroke: var(--ink); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.prog { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.prog i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width .5s cubic-bezier(.2, .8, .2, 1); }
+.count { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; }
+
+.stage { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; padding-block: 8px 24px; margin-inline: -4px; padding-inline: 4px; }
+.stage > .screen { flex: none; }
+.stage > .welcome { flex: 1 0 auto; }
+.stage:has(.welcome) { padding-block: 16px; }
+.screen { display: flex; flex-direction: column; gap: 20px; }
+.in-fwd { animation: inF .38s cubic-bezier(.2, .8, .2, 1); }
+.in-back { animation: inB .38s cubic-bezier(.2, .8, .2, 1); }
+@keyframes inF { from { transform: translateX(28px); opacity: .2; } to { transform: none; opacity: 1; } }
+@keyframes inB { from { transform: translateX(-28px); opacity: .2; } to { transform: none; opacity: 1; } }
+
+/* Question header */
+.q-head { display: flex; flex-direction: column; gap: 8px; }
+.eyebrow { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.lead { font-size: 17px; color: var(--ink); background: var(--blue-soft); border-radius: var(--r); padding: 14px 16px; box-shadow: var(--shadow); }
+h1, h2 { font-family: var(--f-display); font-weight: 650; letter-spacing: -.015em; text-wrap: balance; margin: 0; }
+h2 { font-size: clamp(24px, 6.4vw, 30px); line-height: 1.15; }
+h2:focus { outline: none; }
+h2 .scn { font-weight: 500; }
+.flow { display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); align-items: center; gap: 8px; }
+.step { background: var(--accent-soft); border-radius: var(--r); box-shadow: var(--shadow); padding: 14px; display: flex; flex-direction: column; gap: 10px; height: 100%; }
+.step .ill { width: 44px; height: 44px; }
+.step .ill svg { width: 100%; height: 100%; display: block; }
+.step .tx { display: flex; flex-direction: column; gap: 2px; }
+.step .k { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.step b { font-size: 16px; line-height: 1.3; }
+.step .d { font-size: 14px; color: var(--muted); }
+.flow .arrow { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.hint { color: var(--muted); font-size: 15px; margin: 0; }
+
+/* Options */
+.opts { display: grid; gap: 10px; }
+.opts.cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.opt {
+  position: relative; width: 100%; min-width: 0; text-align: left; cursor: pointer;
+  display: flex; align-items: center; gap: 14px;
+  min-height: 58px; padding: 12px 52px 12px 16px;
+  border: 1.5px solid var(--line); border-radius: var(--r); background: var(--surface);
+  transition: border-color .2s, background-color .2s, transform .12s, opacity .2s;
+}
+.opt:hover { border-color: var(--accent); }
+.opt:active { transform: scale(.985); }
+.opt.on { border-color: var(--accent); background: var(--accent-soft); }
+.opt.dim { opacity: .45; }
+.opt .tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.opt .t { font-weight: 700; }
+.opt .d { color: var(--muted); font-size: 14px; }
+.opt.card { flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px 14px 16px; min-height: 140px; }
+.opt.card .ill { width: 64px; height: 64px; }
+.opt.wide { grid-column: 1 / -1; min-height: 58px; flex-direction: row; align-items: center; padding: 12px 52px 12px 16px; }
+.opt.wide .ill { width: 40px; height: 40px; }
+.opt .ill.sm { width: 48px; height: 48px; flex: none; }
+.opt .ill svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.opt.on .ill svg { animation: pop .42s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.1) rotate(-3deg); } 100% { transform: scale(1); } }
+
+.mark {
+  position: absolute; right: 16px; top: 50%; translate: 0 -50%;
+  width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface);
+  display: grid; place-items: center; transition: background-color .2s, border-color .2s;
+}
+.card .mark { top: 14px; right: 14px; translate: none; }
+.multi .mark { border-radius: 7px; }
+.mark svg { width: 14px; height: 14px; stroke: var(--accent-ink); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; transform: scale(0); transition: transform .22s cubic-bezier(.3, 1.6, .5, 1); }
+.on .mark { background: var(--accent); border-color: var(--accent); }
+.on .mark svg { transform: scale(1); }
+
+/* Chips */
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  min-height: 52px; padding: 0 20px; border-radius: 99px; border: 1.5px solid var(--line); background: var(--surface);
+  font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+  transition: border-color .2s, background-color .2s, color .2s, transform .12s;
+}
+.chip:hover { border-color: var(--accent); }
+.chip:active { transform: scale(.97); }
+.chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip.dim { opacity: .45; }
+
+/* Duration bars (Q7) */
+.dur { margin-left: auto; flex: none; width: 88px; height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.dur i { display: block; height: 100%; background: var(--blue); border-radius: 99px; }
+
+/* Compare cards (Q9) */
+.vs { display: grid; gap: 10px; }
+.mock { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.mock .lab { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.dots { display: flex; gap: 5px; flex-wrap: wrap; }
+.dots i { width: 12px; height: 12px; border-radius: 50%; background: var(--line); }
+.dots i.f { background: var(--accent); }
+.stars { display: flex; gap: 3px; }
+.stars svg { width: 20px; height: 20px; }
+.mock .big { font-family: var(--f-display); font-size: 19px; font-weight: 650; line-height: 1.25; }
+
+textarea {
+  width: 100%; min-height: 140px; resize: vertical; padding: 14px 16px; border-radius: var(--r);
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; line-height: 1.45;
+}
+textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.counter { font-size: 13px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Action bar */
+.btnrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.nudge:empty { display: none; }
+.actions {
+  position: relative; z-index: 4; flex: none;
+  display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+  padding-block: 18px calc(16px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
+  box-shadow: 0 -18px 18px -6px var(--bg);
+}
+.actions[hidden] { display: none !important; }
+.nudge { font-size: 14px; color: var(--muted); min-height: 20px; }
+.nudge.warn { color: var(--warn); font-weight: 700; }
+.btn {
+  min-height: 52px; padding: 0 28px; border-radius: 99px; border: 0; cursor: pointer;
+  background: var(--accent); color: var(--accent-ink); font-family: var(--f-display); font-weight: 650; font-size: 17px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none;
+  transition: transform .12s, filter .2s;
+}
+.btn:hover { filter: brightness(1.06); }
+.btn:active { transform: scale(.97); }
+.btn.quiet { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+.btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Welcome */
+.welcome { flex: 1; min-height: 0; gap: 14px; }
+.hero { flex: 1 1 0; min-height: 110px; max-height: 300px; width: 100%; max-width: 100%; background: var(--blue-soft); border-radius: 28px; box-shadow: var(--shadow); overflow: hidden; }
+.welcome .start { margin-top: 4px; }
+.hero { position: relative; }
+.langs { position: absolute; top: 12px; right: 12px; display: flex; gap: 2px; padding: 3px; border-radius: 99px; background: var(--surface); border: 1.5px solid var(--line); }
+.langs button { min-width: 44px; min-height: 36px; padding: 0 12px; border: 0; border-radius: 99px; background: transparent; font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer; }
+.langs button.on { background: var(--accent); color: var(--accent-ink); }
+.hero svg { width: 100%; height: 100%; display: block; }
+.hero .sunG { animation: rise 1.1s cubic-bezier(.2, .8, .2, 1) both; transform-box: fill-box; transform-origin: center; }
+.hero .p1 { animation: drop .7s .15s cubic-bezier(.3, 1.4, .5, 1) both; }
+.hero .p2 { animation: drop .7s .3s cubic-bezier(.3, 1.4, .5, 1) both; }
+@keyframes rise { from { transform: translateY(26px); } to { transform: none; } }
+@keyframes drop { from { transform: translateY(-14px); } to { transform: none; } }
+h1 { font-size: clamp(27px, 7.6vw, 40px); line-height: 1.06; }
+.intro { margin: 0; font-size: 16px; color: var(--ink); max-width: 34em; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.fact { font-size: 14px; font-weight: 700; padding: 6px 12px; border-radius: 99px; background: var(--blue-soft); color: var(--ink); }
+.promise { list-style: none; margin: 0; padding: 12px 14px; display: grid; gap: 8px; background: var(--accent-soft); border-radius: var(--r); box-shadow: var(--shadow); }
+.promise li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; font-size: 14px; }
+.promise svg { width: 20px; height: 20px; margin-top: 1px; stroke: var(--accent); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.start { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.small { font-size: 14px; color: var(--muted); margin: 0; }
+.small b { color: var(--ink); font-weight: 700; user-select: all; }
+
+/* Done */
+.done { align-items: center; text-align: center; padding-top: 40px; gap: 18px; }
+.done .check { width: 96px; height: 96px; }
+.done .check circle { fill: var(--accent-soft); }
+.done .check path { fill: none; stroke: var(--accent); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 60; stroke-dashoffset: 0; animation: draw .6s .15s ease-out both; }
+@keyframes draw { from { stroke-dashoffset: 60; } to { stroke-dashoffset: 0; } }
+.done p { margin: 0; max-width: 30em; }
+.status { font-size: 14px; color: var(--muted); }
+.status.warn { color: var(--warn); font-weight: 700; }
+.done { padding-top: 12px; }
+.play {
+  position: relative; width: 100%; max-width: 340px; aspect-ratio: 1; margin: 0 auto; cursor: pointer;
+  background: var(--blue-soft); border-radius: 32px; box-shadow: var(--shadow); overflow: hidden; touch-action: manipulation; user-select: none;
+}
+.play svg, .play canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.play .sunSpin { transform-box: view-box; transform-origin: 232px 70px; animation: spin 24s linear infinite; }
+.play .face { transform-box: view-box; transform-origin: 150px 230px; animation: bob 3.2s ease-in-out infinite; }
+.play .face.go { animation: yay .45s cubic-bezier(.3, 1.6, .5, 1), bob 3.2s .45s ease-in-out infinite; }
+.play .tubeG { transform-box: fill-box; transform-origin: 50% 100%; }
+.play .tubeG.go { animation: squeeze .35s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes yay { 0% { transform: scale(1); } 40% { transform: scale(1.06) rotate(-2deg); } 100% { transform: scale(1); } }
+@keyframes squeeze { 0% { transform: scale(1, 1); } 35% { transform: scale(1.12, .82); } 100% { transform: scale(1, 1); } }
+.playhint { font-size: 15px; color: var(--muted); font-weight: 700; min-height: 22px; font-variant-numeric: tabular-nums; }
+.linkbtn { border: 0; background: transparent; color: var(--muted); font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 12px; min-height: 44px; }
+.linkbtn:hover { color: var(--accent); }
+.statusbox { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.signup { width: 100%; text-align: left; background: var(--accent-soft); border-radius: var(--r); box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.signup h3 { margin: 0; font-family: var(--f-display); font-size: 20px; font-weight: 650; }
+.signup p { margin: 0; }
+.signup .chip { min-height: 44px; background: var(--surface); }
+.signup .chip.on { background: var(--accent); }
+.flabel { font-weight: 700; font-size: 15px; margin-bottom: -6px; }
+.signup input {
+  width: 100%; min-height: 50px; padding: 0 16px; border-radius: 14px; border: 1.5px solid var(--line);
+  background: var(--surface); color: var(--ink); font: inherit;
+}
+.signup input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.signup .btn { align-self: flex-start; }
+.signup .btn:disabled { opacity: .6; cursor: default; }
+.ferr { color: var(--warn); font-weight: 700; font-size: 14px; }
+.ferr:empty { display: none; }
+
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+/* Illustration paint */
+.s { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.thin { stroke-width: 1.5; }
+.dash { stroke-dasharray: 4 4; }
+.fa { fill: var(--accent-soft); }
+.fb { fill: var(--sun-soft); }
+.fc { fill: var(--cream); }
+.fp { fill: var(--blush); }
+.fl { fill: var(--blue); }
+.fs { fill: var(--sun); }
+.fk { fill: var(--accent); }
+.ft { fill: var(--tone); }
+.fw { fill: var(--surface); }
+.sw { fill: none; stroke: #ffffff; stroke-opacity: .45; stroke-width: 7; stroke-linecap: round; }
+.lbl { font: 700 8px var(--f-body); fill: var(--ink); text-anchor: middle; dominant-baseline: middle; }
+.lbl.big { font-size: 15px; }
+.on .scan { animation: scan 1.2s ease-in-out infinite alternate; }
+.scan { fill: none; stroke: var(--blue); stroke-width: 2.5; stroke-linecap: round; }
+@keyframes scan { from { transform: translateY(-8px); } to { transform: translateY(8px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media (hover: none) { .opt:hover, .chip:hover { border-color: var(--line); } .opt.on:hover { border-color: var(--accent); } }
+</style>
+
+<div class="app">
+  <header class="bar" id="bar" hidden>
+    <div class="barrow">
+      <div class="prog" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" id="prog"><i id="progFill"></i></div>
+      <span class="count" id="count"></span>
+    </div>
+    <button class="about" id="about" type="button" hidden></button>
+  </header>
+  <main class="stage" id="stage" aria-live="polite"></main>
+  <footer class="actions" id="actions" hidden>
+    <span class="nudge" id="nudge"></span>
+    <div class="btnrow">
+      <button class="btn quiet" id="back" type="button"><svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Back</button>
+      <button class="btn" id="next" type="button"></button>
+    </div>
+  </footer>
+  <form class="hp" aria-hidden="true"><label for="website">Leave this empty</label><input id="website" name="website" tabindex="-1" autocomplete="off"></form>
+</div>
+
+<script>
+/* ---------- Settings you can change ---------- */
+const CONFIG = {
+  deleteBy: { en: "31 December 2027", nl: "31 december 2027" },  // shown in the privacy text
+  contactEmail: "parichehr.t96@gmail.com",  // shown on the first screen
+  askContact: true,              // show the optional "email or phone" box on the thank-you screen
+  version: 1
+};
+
+/* ---------- Illustrations (64 x 64, drawn with theme colours) ---------- */
+const sp = (x, y, r) => `<path class="fs" d="M${x} ${y - r}Q${x} ${y} ${x + r} ${y}Q${x} ${y} ${x} ${y + r}Q${x} ${y} ${x - r} ${y}Q${x} ${y} ${x} ${y - r}Z"/>`;
+const star = (cx, cy, r, cls = "fs") => {
+  let d = "";
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .45 : r;
+    d += (i ? "L" : "M") + (cx + rr * Math.cos(a)).toFixed(1) + " " + (cy + rr * Math.sin(a)).toFixed(1);
+  }
+  return `<path class="${cls}" d="${d}Z"/>`;
+};
+const FACE = `<ellipse class="fc s" cx="32" cy="34" rx="17" ry="21"/>`;
+const EYES = `<path class="s" d="M24.5 31q2.5 2 5 0M34.5 31q2.5 2 5 0"/>`;
+const BARS = `<path class="s" d="M20 22v20M25 22v20M29 22v20M35 22v20M39 22v20M44 22v20"/>`;
+const SUN = (cx, cy, r) => `<circle class="fs" cx="${cx}" cy="${cy}" r="${r}"/><path class="s thin" d="${[0, 1, 2, 3, 4, 5, 6, 7].map(i => { const a = i * Math.PI / 4, r1 = r + 3, r2 = r + 6; return `M${(cx + r1 * Math.cos(a)).toFixed(1)} ${(cy + r1 * Math.sin(a)).toFixed(1)}L${(cx + r2 * Math.cos(a)).toFixed(1)} ${(cy + r2 * Math.sin(a)).toFixed(1)}`; }).join("")}"/>`;
+const TUBE = `<path class="fc s" d="M19 12h20l-3 34H22z"/><path class="s thin" d="M20 16.5h18"/><rect class="fa s" x="21" y="46" width="16" height="9" rx="2"/><text x="29" y="31" class="lbl">SPF</text><text x="29" y="38" class="lbl">50</text>`;
+const JAR = `<path class="fc s" d="M25 20c0-4 3-7 6-7s4 2 4 4c2 0 4 1 4 3z"/><rect class="fa s" x="13" y="20" width="38" height="9" rx="3"/><rect class="fc s" x="11" y="29" width="42" height="24" rx="7"/><path class="s thin" d="M20 41h24"/>`;
+
+const ILL = {
+  tight: FACE + EYES + `<path class="s" d="M28 44h8"/><path class="s thin" d="M18.5 37l3 1.5-1.5 3M45.5 36l-3 1.5 1.5 3M29 19l3 2.5 3-2.5"/><circle class="fk" cx="22" cy="46" r="1"/><circle class="fk" cx="43" cy="46" r="1"/>`,
+  shiny: FACE + EYES + `<path class="s" d="M28 43q4 2.5 8 0"/>` + sp(25, 21, 3.5) + sp(42, 24, 3) + sp(19, 41, 3) + sp(45, 42, 3.5) + sp(32, 53, 2.5),
+  tzone: FACE + `<path class="fb" d="M21 20Q32 14 43 20L43 25.5 34.5 25.5 34.5 45Q32 46.5 29.5 45L29.5 25.5 21 25.5Z"/>` + EYES + `<path class="s" d="M28 47q4 2 8 0"/>` + sp(26, 21, 2.8) + sp(32, 38, 2.6) + `<ellipse class="s" cx="32" cy="34" rx="17" ry="21"/>`,
+  comfy: FACE + `<path class="s" d="M24.5 32q2.5-2.5 5 0M34.5 32q2.5-2.5 5 0"/><path class="s" d="M27 42q5 4.5 10 0"/><circle class="fp" cx="22" cy="40" r="3.5"/><circle class="fp" cx="42" cy="40" r="3.5"/>`,
+  unsure: `<ellipse class="s dash" cx="32" cy="34" rx="17" ry="21"/><path class="s" d="M27 28a5 5 0 1 1 7 4.6c-1.4.6-2 1.6-2 3v1.4"/><circle class="fk" cx="32" cy="42" r="1.8"/>`,
+  tube: SUN(48, 14, 6) + TUBE,
+  jar: JAR,
+  none: `<path class="s" d="M8 52h48"/><rect class="s dash" x="20" y="28" width="24" height="24" rx="6"/>`,
+  friend: `<path class="fa s" d="M10 12h26a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H22l-7 6v-6h-5a4 4 0 0 1-4-4V16a4 4 0 0 1 4-4z"/><circle class="fk" cx="16" cy="22" r="1.8"/><circle class="fk" cx="23" cy="22" r="1.8"/><circle class="fk" cx="30" cy="22" r="1.8"/><path class="fb s" d="M30 30h24a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4h-3v6l-7-6H30a4 4 0 0 1-4-4V34a4 4 0 0 1 4-4z"/><path class="fl" d="M42 45s-5-3-5-6.2a2.6 2.6 0 0 1 5-.9 2.6 2.6 0 0 1 5 .9C47 42 42 45 42 45z"/>`,
+  staff: `<path class="fc s" d="M14 24h36l-3 30H17z"/><path class="s" d="M24 24v-5a8 8 0 0 1 16 0v5"/><circle class="fa s" cx="32" cy="39" r="7"/><path class="s thin" d="M29 39l2 2 4-4"/>`,
+  social: `<rect class="fc s" x="20" y="8" width="24" height="48" rx="5"/><path class="s thin" d="M29 13h6"/><path class="fl" d="M32 40s-8-5-8-10a4 4 0 0 1 8-1.4 4 4 0 0 1 8 1.4c0 5-8 10-8 10z"/>`,
+  reviews: `<rect class="fc s" x="7" y="14" width="50" height="36" rx="5"/><path class="s" d="M7 22h50"/>` + star(20, 36, 6) + star(32, 36, 6) + star(44, 36, 6, "fa"),
+  pro: `<rect class="fc s" x="16" y="12" width="32" height="44" rx="4"/><rect class="fa s" x="25" y="8" width="14" height="8" rx="2"/><path class="s thin" d="M23 28h18M23 35h18M23 42h11"/>`,
+  offer: `<path class="fb s" d="M9 33 30 12h21v21L30 54z"/><circle class="s" cx="43" cy="20" r="3"/><text x="30" y="36" class="lbl big">%</text>`,
+  price: `<circle class="fb s" cx="32" cy="32" r="20"/><circle class="s thin" cx="32" cy="32" r="15"/><text x="32" y="33" class="lbl big">€</text>`,
+  nofrag: `<circle class="fa" cx="32" cy="22" r="7"/><circle class="fa" cx="41.5" cy="29" r="7"/><circle class="fa" cx="38" cy="40" r="7"/><circle class="fa" cx="26" cy="40" r="7"/><circle class="fa" cx="22.5" cy="29" r="7"/><circle class="fs" cx="32" cy="31.5" r="5"/><path class="s" d="M14 50 50 14"/>`,
+  spf: SUN(32, 32, 12),
+  light: `<path class="fa s" d="M32 9c8 11 14 19 14 28a14 14 0 0 1-28 0c0-9 6-17 14-28z"/><path class="s thin" d="M25.5 38a7 7 0 0 0 6 7"/>`,
+  nocast: `<circle class="ft" cx="32" cy="32" r="20"/><path class="sw" d="M19 37c7-7 19-11 27-9"/><circle class="s" cx="32" cy="32" r="20"/>`,
+  taps: `<rect class="fc s" x="14" y="6" width="36" height="52" rx="6"/><rect class="fk" x="20" y="15" width="24" height="8" rx="4"/><rect class="fk" x="20" y="28" width="24" height="8" rx="4"/><rect class="fk" x="20" y="41" width="24" height="8" rx="4"/>`,
+  ingredients: `<rect class="fc s" x="10" y="9" width="34" height="44" rx="4"/><path class="s thin" d="M16 19h22M16 26h22M16 33h14M16 40h10"/><circle class="fa s" cx="42" cy="42" r="9"/><path class="s" d="M48.5 48.5 55 55"/>`,
+  makeup: `<path class="fa s" d="M41 7l7 7-13 13-7-7z"/><path class="fc s" d="M28 20l7 7c-2 9-10 17-21 19 2-11 6-21 14-26z"/><path class="s thin" d="M22 34l3 3M18 39l3 3"/>`,
+  chat: `<path class="fa s" d="M10 14h44a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4H26l-10 8v-8h-6a4 4 0 0 1-4-4V18a4 4 0 0 1 4-4z"/><circle class="fk" cx="22" cy="28" r="2.5"/><circle class="fk" cx="32" cy="28" r="2.5"/><circle class="fk" cx="42" cy="28" r="2.5"/>`,
+  scan: `<path class="s" d="M10 20v-6a4 4 0 0 1 4-4h6M44 10h6a4 4 0 0 1 4 4v6M54 44v6a4 4 0 0 1-4 4h-6M20 54h-6a4 4 0 0 1-4-4v-6"/>` + BARS + `<path class="scan" d="M14 32h36"/>`,
+  quiz: `<rect class="fc s" x="12" y="9" width="40" height="46" rx="5"/><rect class="fa s" x="18" y="17" width="7" height="7" rx="2"/><rect class="fa s" x="18" y="29" width="7" height="7" rx="2"/><rect class="s" x="18" y="41" width="7" height="7" rx="2"/><path class="s thin" d="M30 20.5h15M30 32.5h15M30 44.5h10"/><path class="s thin" d="M19.5 20.5l1.6 1.6 2.6-3M19.5 32.5l1.6 1.6 2.6-3"/>`,
+  yes: BARS + `<circle class="fk" cx="46" cy="46" r="10"/><path d="M41.5 46l3 3 6-6.5" fill="none" stroke="var(--accent-ink)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`,
+  minute: `<circle class="fc s" cx="32" cy="36" r="18"/><path class="fa" d="M32 36V18a18 18 0 0 1 12.7 5.3z"/><path class="s" d="M28 9h8M32 9v9M32 36l7-7"/><circle class="s" cx="32" cy="36" r="18"/>`,
+  no: BARS + `<path class="s" d="M14 50 50 14"/>`,
+  fair: `<path class="s" d="M32 12v40M22 52h20M14 18h36"/><path class="s thin" d="M14 18 8 34M14 18l6 16M50 18l-6 16M50 18l6 16"/><path class="fa s" d="M6 34a8 6 0 0 0 16 0z"/><path class="fa s" d="M42 34a8 6 0 0 0 16 0z"/>`,
+  explain: `<circle class="fa s" cx="32" cy="32" r="20"/><path class="s" d="M32 29v12"/><circle class="fk" cx="32" cy="23" r="2.2"/>`,
+  pushy: `<rect class="fc s" x="34" y="21" width="22" height="22" rx="3"/><path class="fb s" d="M6 26h15v-7l11 13-11 13v-7H6z"/>`,
+  stop: `<rect class="fc s" x="12" y="10" width="26" height="44" rx="2"/><circle class="fk" cx="32" cy="33" r="1.8"/><path class="s" d="M38 32h18M50 26l6 6-6 6"/>`,
+  fine: `<circle class="fa s" cx="32" cy="32" r="20"/><path class="s" d="M23 33l6 6 12-13"/>`,
+  shown: `<path class="fc s" d="M6 32s10-14 26-14 26 14 26 14-10 14-26 14S6 32 6 32z"/><circle class="fk" cx="32" cy="32" r="6"/>`,
+  less: `<path class="fc s" d="M32 8l20 7v15c0 13-9 21-20 26-11-5-20-13-20-26V15z"/><path class="s" d="M24 32h16"/>`
+};
+const svg = (k, vb = "0 0 64 64") => `<svg viewBox="${vb}" aria-hidden="true" focusable="false">${ILL[k]}</svg>`;
+const CHECK = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>`;
+
+/* ---------- Questions ---------- */
+const QS = [
+  { id: "q1", type: "single", layout: "rows", title: "How do you describe yourself?",
+    opts: [["woman", "Woman"], ["man", "Man"], ["other", "Another way"], ["na", "I'd rather not say"]] },
+  { id: "q2", type: "single", layout: "chips", title: "How old are you?",
+    opts: [["18-24", "18–24"], ["25-34", "25–34"], ["35-44", "35–44"], ["45-54", "45–54"], ["55+", "55 or older"]] },
+  { id: "q3", type: "single", layout: "cards", title: "How does your face usually feel by midday?",
+    opts: [["tight", "Tight or flaky", "", "tight"], ["shiny", "Shiny all over", "", "shiny"],
+           ["tzone", "Shiny T-zone", "Forehead, nose and chin only", "tzone"], ["comfy", "Comfortable", "", "comfy"],
+           ["unsure", "I don't know", "", "unsure", true]] },
+  { id: "q4", type: "single", layout: "cards", title: "Which of these do you use on your face?",
+    hint: "If you use both, pick the one you'd like to answer about.",
+    opts: [["sunscreen", "Sunscreen", "", "tube"], ["moisturiser", "Moisturiser", "With or without SPF", "jar"],
+           ["neither", "Neither", "We'll skip a few questions", "none", true]] },
+  { id: "q5", type: "multi", layout: "chips", title: "Where did you buy your {p}?", hint: "Pick all that apply.",
+    opts: [["kruidvat", "Kruidvat"], ["etos", "Etos"], ["douglas", "Douglas"], ["hema", "HEMA"], ["action", "Action"], ["else", "Somewhere else"]] },
+  { id: "q6", type: "multi", max: 2, layout: "cards", title: "How did you pick your {p}?", hint: "Pick up to 2.",
+    opts: [["friend", "A friend or family member", "recommended it", "friend"], ["staff", "Shop staff", "advised me", "staff"],
+           ["social", "Social media", "I saw it there", "social"], ["reviews", "Online reviews", "I read them", "reviews"],
+           ["pro", "A doctor or skin therapist", "advised it", "pro"], ["offer", "It was on offer", "", "offer"]] },
+  { id: "q7", type: "single", layout: "rows", title: "After how long could you tell whether your {p} works for you?",
+    opts: [["days", "A few days", "", null, false, 6], ["week", "About a week", "", null, false, 16], ["2-3w", "2–3 weeks", "", null, false, 38],
+           ["4-6w", "4–6 weeks", "", null, false, 72], ["longer", "Longer than that", "", null, false, 100]] },
+  { id: "q8", type: "multi", max: 3, layout: "cards", title: "What matters most when you choose a {p}?", hint: "Pick up to 3.",
+    opts: [["price", "Low price", "", "price"], ["nofrag", "Fragrance-free", "", "nofrag"], ["spf", "Has SPF", "", "spf"],
+           ["light", "Light texture", "", "light"], ["nocast", "No white cast", "", "nocast"], ["makeup", "Works under makeup", "", "makeup"],
+           ["ingredients", "Ingredients", "What's in it, or what isn't", "ingredients", true]] },
+  { id: "q9", type: "single", layout: "chips", title: "How much do you usually spend on your {p}?",
+    opts: [["u10", "Under €10"], ["10-20", "€10–20"], ["20-35", "€20–35"], ["35+", "More than €35"]] },
+  { id: "q10", type: "single", layout: "compare", title: "Which helps you more when choosing?", hint: "Imagine you see this next to a {p}.",
+    opts: [["a", "A"], ["b", "B"], ["both", "Both together"], ["neither", "Neither"]] },
+  { id: "q11", type: "single", layout: "rows", title: "Would you trust an AI chat to suggest a {p} for you?",
+    opts: [["yes", "Yes", "", "chat"], ["reviews", "Only if it shows reviews from real women", "", "reviews"],
+           ["no", "No", "", "less"], ["unsure", "I'm not sure", "", "unsure"]] },
+  { id: "q12", type: "single", layout: "rows", title: "Would you share skin concerns, like spots or redness, to get better matches?",
+    hint: "Sharing would be optional and need your separate OK.",
+    opts: [["yes", "Yes", "", "fine"], ["maybe", "Maybe, if it's clear what happens with it", "", "explain"], ["no", "No", "", "less"]] },
+  { id: "q13", type: "single", layout: "rows", scenario: "unlock",
+    title: "How would this feel to you?", hint: "Imagine a skincare website or app that works like this:",
+    opts: [["fair", "Fair", "", "fair"], ["explain", "Fair, if it explains why", "", "explain"], ["pushy", "A bit pushy", "", "pushy"], ["stop", "I'd stop using it", "", "stop"]] },
+  { id: "q14", type: "single", layout: "chips", title: "How many reviews from women with skin like yours would you need before you trust a {p}?",
+    opts: [["3", "3 or more"], ["5", "5 or more"], ["10", "10 or more"], ["20", "20 or more"], ["any", "The number doesn't matter"]] },
+  { id: "q15", type: "text", title: "If you could ask a skincare chat anything, what would you ask first?",
+    hint: "Optional. A sentence is enough.", placeholder: "For example: which sunscreen doesn't sting my eyes?" }
+];
+// option tuple: [id, label, sub, illustration, wide, durationPercent, exclusive]
+
+/* ---------- Languages ---------- */
+const UI = {
+  en: {
+    h1: "How do you choose your sunscreen and moisturiser?",
+    intro: "A short survey for women in the Netherlands about finding a face sunscreen or moisturiser that suits your skin.",
+    f1: "3 minutes", f2: "15 questions", f3: "Anonymous",
+    p1: "No name, no email, no medical questions.",
+    p2: "Used only for this research. Stored in the EU, deleted by {date}.",
+    p3: "Skip any question or stop whenever you want.",
+    start: "Start the survey",
+    small: "By starting, you confirm you're 18 or older. Questions? Email",
+    langAria: "Language",
+    back: "Back", next: "Next", skip: "Skip", finish: "Finish",
+    qof: "Question {n} of {m}", aboutA: "About your", change: "Change",
+    picked: "{c} of {m} picked", maxw: "Pick up to {m}. Tap one to remove it.",
+    yourq: "Your question",
+    optA: "Option A", optB: "Option B",
+    aText: "11 of 14 women with skin like yours would buy it again", bText: "4.3 stars from 2,300 reviews",
+    step: "Step {n}", s1b: "You review one product you use", s1d: "3 taps", s2b: "You see all reviews", s2d: "for every product",
+    flowAria: "A skincare website or app asks you to review one product you use, in 3 taps, before you can see all reviews.",
+    playHint: "Tap the picture. Go on, squeeze the tube.", drops: "{n} drops of sunshine.",
+    playAria: "Tap the picture to squeeze out some sunshine",
+    thanks: "Thank you, that's it.", helps: "Your answers help a lot.", restart: "Start over",
+    saving: "Sending your answers…", saved: "Your answers are saved.",
+    preview: "This is a preview, so your answers weren't saved.",
+    error: "Your answers couldn't be sent. Check your connection and try again.", retry: "Try again",
+    sentH: "Thanks, we'll be in touch.", sentP: "Your contact details are saved separately from your answers.",
+    sh3: "Want to tell us more?",
+    sp: "Would you talk for 10 minutes about how you choose skincare, or like to hear what comes out of this research?",
+    talk: "Talk for 10 minutes", results: "Hear the results", wantsAria: "What would you like?",
+    label: "Your email or phone number", placeholder: "name@example.com or 0612345678",
+    ssmall: "It's saved separately and isn't connected to your answers. We only use it to contact you about this research and delete it by {date}.",
+    send: "Send", sending: "Sending…",
+    errWants: "Pick what you'd like: a talk, the results, or both.",
+    errContact: "Enter an email address or a phone number with at least 9 digits.",
+    errSend: "That didn't send. Check your connection and try again.",
+    words: ["Nice squeeze.", "More sunshine!", "SPF approved.", "Glowing.", "You're on a roll.", "Okay, now you're just having fun."],
+    product: { sunscreen: "sunscreen", moisturiser: "moisturiser", either: "sunscreen or moisturiser" }
+  },
+  nl: {
+    h1: "Hoe kies jij je zonnebrand en dagcrème?",
+    intro: "Een korte vragenlijst voor vrouwen in Nederland over het vinden van een zonnebrand of dagcrème voor je gezicht die bij je huid past.",
+    f1: "3 minuten", f2: "15 vragen", f3: "Anoniem",
+    p1: "Geen naam, geen e-mail, geen medische vragen.",
+    p2: "Alleen voor dit onderzoek. Opgeslagen in de EU, verwijderd op {date}.",
+    p3: "Sla elke vraag over of stop wanneer je wilt.",
+    start: "Start de vragenlijst",
+    small: "Door te starten bevestig je dat je 18 jaar of ouder bent. Vragen? Mail naar",
+    langAria: "Taal",
+    back: "Terug", next: "Volgende", skip: "Overslaan", finish: "Afronden",
+    qof: "Vraag {n} van {m}", aboutA: "Over je", change: "Wijzig",
+    picked: "{c} van {m} gekozen", maxw: "Kies er maximaal {m}. Tik er een aan om hem weg te halen.",
+    yourq: "Je vraag",
+    optA: "Optie A", optB: "Optie B",
+    aText: "11 van de 14 vrouwen met een huid zoals de jouwe zouden het opnieuw kopen", bText: "4,3 sterren uit 2.300 reviews",
+    step: "Stap {n}", s1b: "Je beoordeelt één product dat je gebruikt", s1d: "3 tikken", s2b: "Je ziet alle reviews", s2d: "van elk product",
+    flowAria: "Een skincare-website of -app vraagt je eerst één product dat je gebruikt te beoordelen, in 3 tikken, voordat je alle reviews ziet.",
+    playHint: "Tik op de afbeelding. Knijp maar in de tube.", drops: "{n} druppels zonneschijn.",
+    playAria: "Tik op de afbeelding om wat zonneschijn uit de tube te knijpen",
+    thanks: "Bedankt, dat was het.", helps: "Je antwoorden helpen enorm.", restart: "Opnieuw beginnen",
+    saving: "Je antwoorden worden verstuurd…", saved: "Je antwoorden zijn opgeslagen.",
+    preview: "Dit is een preview, dus je antwoorden zijn niet opgeslagen.",
+    error: "Je antwoorden konden niet worden verstuurd. Controleer je verbinding en probeer het opnieuw.", retry: "Probeer opnieuw",
+    sentH: "Bedankt, we nemen contact met je op.", sentP: "Je contactgegevens worden apart van je antwoorden opgeslagen.",
+    sh3: "Wil je ons meer vertellen?",
+    sp: "Wil je 10 minuten praten over hoe je skincare kiest, of hoor je graag wat er uit dit onderzoek komt?",
+    talk: "10 minuten praten", results: "De resultaten horen", wantsAria: "Wat wil je?",
+    label: "Je e-mailadres of telefoonnummer", placeholder: "naam@voorbeeld.nl of 0612345678",
+    ssmall: "Dit wordt apart opgeslagen en is niet gekoppeld aan je antwoorden. We gebruiken het alleen om contact met je op te nemen over dit onderzoek en verwijderen het op {date}.",
+    send: "Versturen", sending: "Versturen…",
+    errWants: "Kies wat je wilt: een gesprek, de resultaten of allebei.",
+    errContact: "Vul een e-mailadres in, of een telefoonnummer met minstens 9 cijfers.",
+    errSend: "Dat is niet gelukt. Controleer je verbinding en probeer het opnieuw.",
+    words: ["Lekker geknepen.", "Meer zon!", "SPF-goedgekeurd.", "Stralend.", "Je bent lekker bezig.", "Oké, nu heb je gewoon plezier."],
+    product: { sunscreen: "zonnebrand", moisturiser: "dagcrème", either: "zonnebrand of dagcrème" }
+  }
+};
+const NLQ = {
+  q1: { title: "Hoe omschrijf je jezelf?", opts: { woman: ["Vrouw"], man: ["Man"], other: ["Op een andere manier"], na: ["Zeg ik liever niet"] } },
+  q2: { title: "Hoe oud ben je?", opts: { "55+": ["55 of ouder"] } },
+  q3: { title: "Hoe voelt je gezicht meestal rond het middaguur?",
+    opts: { tight: ["Strak of schilferig"], shiny: ["Overal glanzend"], tzone: ["Glanzende T-zone", "Alleen voorhoofd, neus en kin"], comfy: ["Comfortabel"], unsure: ["Weet ik niet"] } },
+  q4: { title: "Welke van deze gebruik je op je gezicht?", hint: "Gebruik je ze allebei? Kies degene waarover je wilt antwoorden.",
+    opts: { sunscreen: ["Zonnebrand"], moisturiser: ["Dagcrème", "Met of zonder SPF"], neither: ["Geen van beide", "We slaan een paar vragen over"] } },
+  q5: { title: "Waar heb je je {p} gekocht?", hint: "Kies alles wat van toepassing is.", opts: { else: ["Ergens anders"] } },
+  q6: { title: "Hoe heb je je {p} gekozen?", hint: "Kies er maximaal 2.",
+    opts: { friend: ["Een vriendin of familielid", "raadde het aan"], staff: ["Winkelpersoneel", "gaf me advies"], social: ["Social media", "daar zag ik het"],
+            reviews: ["Online reviews", "die heb ik gelezen"], pro: ["Een arts of huidtherapeut", "raadde het aan"], offer: ["Het was in de aanbieding"] } },
+  q7: { title: "Na hoe lang kon je zien of je {p} goed werkt voor jou?",
+    opts: { days: ["Een paar dagen"], week: ["Ongeveer een week"], "2-3w": ["2–3 weken"], "4-6w": ["4–6 weken"], longer: ["Langer dan dat"] } },
+  q8: { title: "Wat vind je het belangrijkst bij het kiezen van een {p}?", hint: "Kies er maximaal 3.",
+    opts: { price: ["Lage prijs"], nofrag: ["Parfumvrij"], spf: ["Met SPF"], light: ["Lichte textuur"], nocast: ["Geen witte waas"], makeup: ["Werkt onder make-up"],
+            ingredients: ["Ingrediënten", "Wat erin zit, of juist niet"] } },
+  q9: { title: "Hoeveel geef je meestal uit aan je {p}?", opts: { u10: ["Minder dan €10"], "35+": ["Meer dan €35"] } },
+  q10: { title: "Wat helpt je meer bij het kiezen?", hint: "Stel je voor dat je dit naast een {p} ziet.", opts: { both: ["Allebei samen"], neither: ["Geen van beide"] } },
+  q11: { title: "Zou je een AI-chat vertrouwen om een {p} voor je te kiezen?",
+    opts: { yes: ["Ja"], reviews: ["Alleen als die reviews van echte vrouwen laat zien"], no: ["Nee"], unsure: ["Weet ik niet zeker"] } },
+  q12: { title: "Zou je huidproblemen, zoals puistjes of roodheid, delen om betere matches te krijgen?",
+    hint: "Delen is optioneel en vraagt apart om je toestemming.", opts: { yes: ["Ja"], maybe: ["Misschien, als duidelijk is wat ermee gebeurt"], no: ["Nee"] } },
+  q13: { title: "Hoe zou dit voor je voelen?", hint: "Stel je een skincare-website of -app voor die zo werkt:",
+    opts: { fair: ["Eerlijk"], explain: ["Eerlijk, als ze uitleggen waarom"], pushy: ["Een beetje opdringerig"], stop: ["Dan stop ik ermee"] } },
+  q14: { title: "Hoeveel reviews van vrouwen met een huid zoals de jouwe heb je nodig voordat je een {p} vertrouwt?",
+    opts: { "3": ["3 of meer"], "5": ["5 of meer"], "10": ["10 of meer"], "20": ["20 of meer"], any: ["Het aantal maakt niet uit"] } },
+  q15: { title: "Als je een skincare-chat alles kon vragen, wat zou je dan als eerste vragen?", hint: "Optioneel. Eén zin is genoeg.",
+    placeholder: "Bijvoorbeeld: welke zonnebrand prikt niet in mijn ogen?" }
+};
+const lang = () => (state.lang === "nl" ? "nl" : "en");
+const t = (k, v = {}) => String(UI[lang()][k] ?? UI.en[k]).replace(/\{(\w+)\}/g, (_, x) => (v[x] ?? ""));
+const qt = (q, f) => (lang() === "nl" && NLQ[q.id] && NLQ[q.id][f]) || q[f];
+const ol = (q, o) => {
+  const n = lang() === "nl" && NLQ[q.id] && NLQ[q.id].opts && NLQ[q.id].opts[o[0]];
+  return n ? [n[0], n[1] || ""] : [o[1], lang() === "nl" ? "" : o[2]];
+};
+const delDate = () => CONFIG.deleteBy[lang()] || CONFIG.deleteBy.en;
+
+/* ---------- State ---------- */
+const KEY = "skincare-survey-v1";
+let state = { screen: "welcome", i: 0, ans: {}, startedAt: 0, status: "" };
+let advanceTimer = null;
+const $ = (id) => document.getElementById(id);
+const stage = $("stage");
+
+function saveDraft() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+}
+function loadDraft() {
+  try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s && s.screen) return s; } catch (e) {}
+  return null;
+}
+const product = () => { const p = UI[lang()].product; return state.ans.q4 === "sunscreen" ? p.sunscreen : state.ans.q4 === "moisturiser" ? p.moisturiser : p.either; };
+const fill = (t) => t.replace("{p}", product());
+const visible = (q) => !(state.ans.q4 === "neither" && (q.id === "q5" || q.id === "q6" || q.id === "q7"));
+const visList = () => QS.filter(visible);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ---------- Rendering ---------- */
+function render(dir = 1) {
+  clearTimeout(advanceTimer);
+  const s = state.screen;
+  $("bar").hidden = s !== "q";
+  $("actions").hidden = s !== "q";
+  let html = "";
+  if (s === "welcome") html = welcomeHTML();
+  else if (s === "q") html = questionHTML(QS[state.i]);
+  else html = doneHTML();
+  stage.innerHTML = html;
+  const scr = stage.firstElementChild;
+  if (dir) scr.classList.add(dir < 0 ? "in-back" : "in-fwd");
+  if (s === "q") { updateChrome(); const h = stage.querySelector("h2"); if (h) h.focus({ preventScroll: true }); }
+  if (s === "done") initPlay();
+  stage.scrollTop = 0;
+  saveDraft();
+}
+
+function welcomeHTML() {
+  const tick = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+  const lb = (code, label) => `<button type="button" data-lang="${code}" aria-pressed="${lang() === code}" class="${lang() === code ? "on" : ""}" lang="${code}">${label}</button>`;
+  return `<section class="screen welcome">
+    <div class="hero">${heroSVG()}
+      <div class="langs" role="group" aria-label="${esc(t("langAria"))}">${lb("en", "EN")}${lb("nl", "NL")}</div>
+    </div>
+    <h1>${esc(t("h1"))}</h1>
+    <p class="intro">${esc(t("intro"))}</p>
+    <div class="facts"><span class="fact">${esc(t("f1"))}</span><span class="fact">${esc(t("f2"))}</span><span class="fact">${esc(t("f3"))}</span></div>
+    <ul class="promise">
+      <li>${tick}<span>${esc(t("p1"))}</span></li>
+      <li>${tick}<span>${esc(t("p2", { date: delDate() }))}</span></li>
+      <li>${tick}<span>${esc(t("p3"))}</span></li>
+    </ul>
+    <div class="start">
+      <button class="btn" type="button" data-act="start">${esc(t("start"))} <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <p class="small">${esc(t("small"))} <b>${esc(CONFIG.contactEmail)}</b></p>
+    </div>
+  </section>`;
+}
+
+function heroSVG() {
+  return `<svg viewBox="0 0 320 200" aria-hidden="true">
+    <circle class="fa" cx="70" cy="168" r="70"/>
+    <g class="sunG">${SUN(238, 62, 30)}</g>
+    <path class="s thin" d="M24 176h272"/>
+    <g class="p1"><g transform="translate(46 54) scale(2)">${JAR}</g></g>
+    <g class="p2"><g transform="translate(160 26) scale(2.4)">${TUBE}</g></g>
+    <circle class="fc s" cx="268" cy="162" r="9"/><circle class="fc s" cx="248" cy="168" r="5"/>
+  </svg>`;
+}
+
+function optInner(o, q) {
+  const [id, , , ill, wide, dur] = o;
+  const [label, sub] = ol(q, o);
+  const illHTML = ill ? `<span class="ill${q.layout === "rows" ? " sm" : ""}">${svg(ill)}</span>` : "";
+  const durHTML = dur ? `<span class="dur" aria-hidden="true"><i style="width:${dur}%"></i></span>` : "";
+  return `${illHTML}<span class="tx"><span class="t">${esc(label)}</span>${sub ? `<span class="d">${esc(sub)}</span>` : ""}</span>${durHTML}<span class="mark">${CHECK}</span>`;
+}
+
+function isOn(q, id) {
+  const v = state.ans[q.id];
+  return q.type === "multi" ? Array.isArray(v) && v.includes(id) : v === id;
+}
+
+function questionHTML(q) {
+  const list = visList(), pos = list.indexOf(q) + 1;
+  const role = q.type === "multi" ? "checkbox" : "radio";
+  let body = "";
+  if (q.type === "text") {
+    const v = state.ans[q.id] || "";
+    body = `<label class="hint" for="t-${q.id}">${esc(t("yourq"))}</label>
+      <textarea id="t-${q.id}" maxlength="1000" placeholder="${esc(qt(q, "placeholder"))}">${esc(v)}</textarea>
+      <div class="counter" id="counter">${v.length} / 1000</div>`;
+  } else if (q.layout === "chips") {
+    body = `<div class="chips${q.type === "multi" ? " multi" : ""}" role="${q.type === "multi" ? "group" : "radiogroup"}" aria-labelledby="qh">` +
+      q.opts.map((o, n) => `<button type="button" class="chip${isOn(q, o[0]) ? " on" : ""}" role="${role}" aria-checked="${isOn(q, o[0])}" data-opt="${o[0]}" data-n="${n + 1}">${esc(ol(q, o)[0])}</button>`).join("") + `</div>`;
+  } else if (q.layout === "compare") {
+    const dots = Array.from({ length: 14 }, (_, k) => `<i class="${k < 11 ? "f" : ""}"></i>`).join("");
+    const stars = [1, 2, 3, 4].map(() => `<svg viewBox="0 0 20 20">${star(10, 10.5, 9)}</svg>`).join("") +
+      `<svg viewBox="0 0 20 20"><defs><clipPath id="half"><rect x="0" y="0" width="6.5" height="20"/></clipPath></defs>${star(10, 10.5, 9, "fa")}<g clip-path="url(#half)">${star(10, 10.5, 9)}</g></svg>`;
+    const card = (id, lab, inner, n) => `<button type="button" class="opt${isOn(q, id) ? " on" : ""}" role="radio" aria-checked="${isOn(q, id)}" data-opt="${id}" data-n="${n}">
+        <span class="mock"><span class="lab">${lab}</span>${inner}</span><span class="mark">${CHECK}</span></button>`;
+    body = `<div class="vs" role="radiogroup" aria-labelledby="qh">
+      ${card("a", esc(t("optA")), `<span class="big">${esc(t("aText"))}</span><span class="dots" aria-hidden="true">${dots}</span>`, 1)}
+      ${card("b", esc(t("optB")), `<span class="stars" aria-hidden="true">${stars}</span><span class="big">${esc(t("bText"))}</span>`, 2)}
+      <div class="chips" style="margin-top:4px">
+        ${q.opts.slice(2).map((o, k) => `<button type="button" class="chip${isOn(q, o[0]) ? " on" : ""}" role="radio" aria-checked="${isOn(q, o[0])}" data-opt="${o[0]}" data-n="${k + 3}">${esc(ol(q, o)[0])}</button>`).join("")}
+      </div></div>`;
+  } else {
+    const cls = q.layout === "cards" ? "opts cards" : "opts";
+    body = `<div class="${cls}${q.type === "multi" ? " multi" : ""}" role="${q.type === "multi" ? "group" : "radiogroup"}" aria-labelledby="qh">` +
+      q.opts.map((o, n) => {
+        const k = q.layout === "cards" ? (o[4] ? "opt wide" : "opt card") : "opt";
+        return `<button type="button" class="${k}${isOn(q, o[0]) ? " on" : ""}" role="${role}" aria-checked="${isOn(q, o[0])}" data-opt="${o[0]}" data-n="${n + 1}">${optInner(o, q)}</button>`;
+      }).join("") + `</div>`;
+  }
+  return `<section class="screen" data-q="${q.id}">
+    <div class="q-head">
+      <span class="eyebrow">${esc(t("qof", { n: pos, m: list.length }))}</span>
+      <h2 id="qh" tabindex="-1">${esc(fill(qt(q, "title")))}</h2>
+      ${qt(q, "hint") ? `<p class="hint">${esc(fill(qt(q, "hint")))}</p>` : ""}
+    </div>
+    ${q.scenario === "unlock" ? `<div class="flow" aria-label="${esc(t("flowAria"))}">
+      <div class="step"><span class="ill">${svg("taps")}</span><span class="tx"><span class="k">${esc(t("step", { n: 1 }))}</span><b>${esc(t("s1b"))}</b><span class="d">${esc(t("s1d"))}</span></span></div>
+      <svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      <div class="step"><span class="ill">${svg("reviews")}</span><span class="tx"><span class="k">${esc(t("step", { n: 2 }))}</span><b>${esc(t("s2b"))}</b><span class="d">${esc(t("s2d"))}</span></span></div>
+    </div>` : ""}
+    ${body}
+  </section>`;
+}
+
+function answered(q) {
+  const v = state.ans[q.id];
+  if (q.type === "multi") return Array.isArray(v) && v.length > 0;
+  if (q.type === "text") return !!(v && v.trim());
+  return !!v;
+}
+
+function updateChrome() {
+  const q = QS[state.i], list = visList(), pos = list.indexOf(q) + 1;
+  const pct = Math.round(((pos - 1) + (answered(q) ? 1 : 0)) / list.length * 100);
+  $("progFill").style.width = Math.max(pct, 3) + "%";
+  $("prog").setAttribute("aria-valuenow", String(pct));
+  $("count").textContent = `${pos}/${list.length}`;
+  const about = $("about");
+  const chosen = state.ans.q4 === "sunscreen" || state.ans.q4 === "moisturiser";
+  about.hidden = !(chosen && QS.indexOf(q) > QS.findIndex((x) => x.id === "q4"));
+  if (!about.hidden) about.innerHTML = `${svg(state.ans.q4 === "sunscreen" ? "tube" : "jar")}<span>${esc(t("aboutA"))} <b>${esc(product())}</b></span><span class="chg">${esc(t("change"))}</span>`;
+  $("back").innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>${esc(t("back"))}`;
+  const last = pos === list.length;
+  const nextBtn = $("next");
+  nextBtn.innerHTML = last ? `${esc(t("finish"))} <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`
+    : answered(q) ? `${esc(t("next"))} <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>` : esc(t("skip"));
+  nextBtn.classList.toggle("quiet", !last && !answered(q));
+  const n = $("nudge");
+  n.classList.remove("warn");
+  if (q.type === "multi" && q.max) {
+    const c = (state.ans[q.id] || []).length;
+    n.textContent = c ? t("picked", { c, m: q.max }) : "";
+  } else n.textContent = "";
+  if (q.type === "multi" && q.max) {
+    const full = (state.ans[q.id] || []).length >= q.max;
+    stage.querySelectorAll("[data-opt]").forEach((b) => b.classList.toggle("dim", full && !b.classList.contains("on")));
+  }
+}
+
+function doneHTML() {
+  const signup = CONFIG.askContact ? `<div id="signupBox">${signupHTML()}</div>` : "";
+  return `<section class="screen done">
+    <div class="play" id="play" role="button" tabindex="0" aria-label="${esc(t("playAria"))}">
+      ${thanksSVG()}
+      <canvas id="fx" aria-hidden="true"></canvas>
+    </div>
+    <p class="playhint" id="playhint">${esc(t("playHint"))}</p>
+    <h1>${esc(t("thanks"))}</h1>
+    <p>${esc(t("helps"))}</p>
+    <div id="statusBox" class="statusbox">${statusHTML()}</div>
+    ${signup}
+    <button class="linkbtn" type="button" data-act="restart">${esc(t("restart"))}</button>
+  </section>`;
+}
+
+function signupHTML() {
+  if (state.contactSent) {
+    return `<div class="signup sent"><h3>${esc(t("sentH"))}</h3><p>${esc(t("sentP"))}</p></div>`;
+  }
+  return `<form class="signup" id="signup" novalidate>
+    <h3>${esc(t("sh3"))}</h3>
+    <p>${esc(t("sp"))}</p>
+    <div class="chips" role="group" aria-label="${esc(t("wantsAria"))}">
+      <button type="button" class="chip" data-want="talk" aria-pressed="false">${esc(t("talk"))}</button>
+      <button type="button" class="chip" data-want="results" aria-pressed="false">${esc(t("results"))}</button>
+    </div>
+    <label class="flabel" for="contact">${esc(t("label"))}</label>
+    <input id="contact" name="contact" type="text" autocomplete="email" placeholder="${esc(t("placeholder"))}" style="font-size:16px" maxlength="80">
+    <p class="small">${esc(t("ssmall", { date: delDate() }))}</p>
+    <p class="ferr" id="ferr" role="alert"></p>
+    <button class="btn" type="submit" id="contactBtn">${esc(t("send"))}</button>
+  </form>`;
+}
+
+function validContact(v) {
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return true;
+  const digits = v.replace(/\D/g, "");
+  return /^[+\d\s().-]+$/.test(v) && digits.length >= 9 && digits.length <= 15;
+}
+
+async function sendContact() {
+  const input = $("contact"), err = $("ferr"), btn = $("contactBtn");
+  const v = (input.value || "").trim();
+  const wants = [...stage.querySelectorAll("[data-want].on")].map((b) => b.dataset.want);
+  if (!wants.length) { err.textContent = t("errWants"); return; }
+  if (!validContact(v)) { err.textContent = t("errContact"); input.focus(); return; }
+  err.textContent = ""; btn.disabled = true; btn.textContent = t("sending");
+  const body = { contact: v, wants, v: CONFIG.version };
+  try {
+    const caps = await capsReady;
+    if (caps.mode === "claude") await caps.db.doc("contacts/" + caps.uid).set({ ...body, receivedOn: new Date().toISOString().slice(0, 10) });
+    else if (caps.mode === "web") {
+      const r = await fetch("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, website: $("website").value }) });
+      if (!r.ok) throw new Error("status " + r.status);
+    }
+    state.contactSent = true; saveDraft();
+    $("signupBox").innerHTML = signupHTML();
+  } catch (e) {
+    err.textContent = t("errSend");
+    btn.disabled = false; btn.textContent = t("send");
+  }
+}
+
+function statusHTML() {
+  const st = state.status;
+  const msg = ["saving", "saved", "preview", "error"].includes(st) ? t(st) : "";
+  return `<p class="status${st === "error" ? " warn" : ""}" role="status">${esc(msg)}</p>
+    ${st === "error" ? `<button class="btn" type="button" data-act="retry">${esc(t("retry"))}</button>` : ""}`;
+}
+
+function thanksSVG() {
+  const rays = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => {
+    const a = i * Math.PI / 6, r1 = 40, r2 = 52;
+    return `M${(232 + r1 * Math.cos(a)).toFixed(1)} ${(70 + r1 * Math.sin(a)).toFixed(1)}L${(232 + r2 * Math.cos(a)).toFixed(1)} ${(70 + r2 * Math.sin(a)).toFixed(1)}`;
+  }).join("");
+  return `<svg viewBox="0 0 300 300" aria-hidden="true">
+    <circle class="fa" cx="150" cy="330" r="170"/>
+    <g class="sunSpin"><path class="s" d="${rays}"/></g>
+    <circle class="fs" cx="232" cy="70" r="30"/>
+    <g class="face"><g transform="translate(150 158)">
+      <ellipse class="fc" cx="0" cy="0" rx="60" ry="74" style="stroke:var(--ink);stroke-width:3"/>
+      <circle class="fp" cx="-34" cy="24" r="11"/><circle class="fp" cx="34" cy="24" r="11"/>
+      <rect class="fk" x="-46" y="-22" width="38" height="24" rx="11"/><rect class="fk" x="8" y="-22" width="38" height="24" rx="11"/>
+      <path d="M-8 -14h16" style="fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round"/>
+      <path d="M-38 -14l8-4M16 -14l8-4" style="fill:none;stroke:#fff;stroke-opacity:.7;stroke-width:3;stroke-linecap:round"/>
+      <path class="smile" d="M-20 28q20 20 40 0" style="fill:none;stroke:var(--ink);stroke-width:3.5;stroke-linecap:round"/>
+    </g></g>
+    <g transform="translate(36 168) rotate(-16)"><g class="tubeG"><g transform="scale(1.7)">${TUBE}</g></g></g>
+    <g transform="translate(206 204) scale(1.35)">${JAR}</g>
+  </svg>`;
+}
+
+/* ---------- Thank-you play: tap to squeeze out sunshine ---------- */
+let drops = 0, playedOnce = false, parts = [], raf = 0;
+function initPlay() {
+  const play = $("play"), cv = $("fx");
+  if (!play || !cv) return;
+  const ctx = cv.getContext("2d");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const size = () => { const r = play.getBoundingClientRect(), d = window.devicePixelRatio || 1; cv.width = r.width * d; cv.height = r.height * d; ctx.setTransform(d, 0, 0, d, 0, 0); };
+  size();
+  try { new ResizeObserver(size).observe(play); } catch (e) {}
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const hint = $("playhint");
+  const words = UI[lang()].words;
+
+  function burst(x, y, n) {
+    const cols = [css("--blue"), css("--green-mid"), css("--accent"), css("--sun"), css("--blue")];
+    for (let k = 0; k < n; k++) {
+      parts.push({ x, y, vx: reduce ? 0 : (Math.random() - .5) * 7, vy: reduce ? 0 : -Math.random() * 7 - 2,
+        r: 4 + Math.random() * 6, kind: ["dot", "spark", "heart", "drop"][k % 4], c: cols[k % cols.length],
+        rot: Math.random() * 6, vr: (Math.random() - .5) * .2, life: 1, ox: reduce ? (Math.random() - .5) * 120 : 0, oy: reduce ? (Math.random() - .5) * 80 : 0 });
+    }
+    drops += n;
+    if (hint) hint.textContent = `${t("drops", { n: drops })} ${words[Math.min(words.length - 1, Math.floor(drops / 40))]}`;
+    const tube = play.querySelector(".tubeG"), face = play.querySelector(".face");
+    [tube, face].forEach((el) => { if (!el) return; el.classList.remove("go"); void el.getBoundingClientRect(); el.classList.add("go"); });
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+  function shape(p) {
+    ctx.save(); ctx.translate(p.x + p.ox, p.y + p.oy); ctx.rotate(p.rot); ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillStyle = p.c;
+    const r = p.r; ctx.beginPath();
+    if (p.kind === "dot") ctx.arc(0, 0, r, 0, Math.PI * 2);
+    else if (p.kind === "spark") { ctx.moveTo(0, -r * 1.4); ctx.quadraticCurveTo(0, 0, r * 1.4, 0); ctx.quadraticCurveTo(0, 0, 0, r * 1.4); ctx.quadraticCurveTo(0, 0, -r * 1.4, 0); ctx.quadraticCurveTo(0, 0, 0, -r * 1.4); }
+    else if (p.kind === "heart") { ctx.moveTo(0, r * .9); ctx.bezierCurveTo(-r * 1.6, -r * .2, -r * .6, -r * 1.4, 0, -r * .4); ctx.bezierCurveTo(r * .6, -r * 1.4, r * 1.6, -r * .2, 0, r * .9); }
+    else { ctx.moveTo(0, -r * 1.3); ctx.bezierCurveTo(r, -r * .2, r, r, 0, r); ctx.bezierCurveTo(-r, r, -r, -r * .2, 0, -r * 1.3); }
+    ctx.fill(); ctx.restore();
+  }
+  function tick() {
+    const w = cv.clientWidth, h = cv.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+    parts = parts.filter((p) => p.life > 0);
+    for (const p of parts) {
+      if (!reduce) {
+        p.vy += .22; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+        if (p.y > h - p.r - 6) { p.y = h - p.r - 6; p.vy *= -.5; p.vx *= .8; }
+        if (p.x < p.r || p.x > w - p.r) p.vx *= -1;
+      }
+      p.life -= reduce ? .02 : .007;
+      shape(p);
+    }
+    raf = parts.length ? requestAnimationFrame(tick) : 0;
+    if (!raf) ctx.clearRect(0, 0, w, h);
+  }
+  const at = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  play.addEventListener("pointerdown", (e) => { const [x, y] = at(e); burst(x, y, 14); });
+  play.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); burst(cv.clientWidth / 2, cv.clientHeight / 2, 18); } });
+  if (!playedOnce) { playedOnce = true; setTimeout(() => { if ($("fx") === cv) { const w = cv.clientWidth; burst(w * .3, cv.clientHeight * .6, 12); burst(w * .7, cv.clientHeight * .55, 12); drops = 0; if (hint) hint.textContent = t("playHint"); } }, 350); }
+}
+
+/* ---------- Navigation ---------- */
+function go(delta) {
+  const list = visList();
+  const pos = list.indexOf(QS[state.i]);
+  const target = list[pos + delta];
+  if (delta < 0 && !target) { state.screen = "welcome"; render(-1); return; }
+  if (!target) { finish(); return; }
+  state.i = QS.indexOf(target);
+  render(delta);
+}
+
+function choose(q, id, el) {
+  if (q.type === "single") {
+    state.ans[q.id] = id;
+    stage.querySelectorAll("[data-opt]").forEach((b) => { const on = b.dataset.opt === id; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); });
+    updateChrome(); saveDraft();
+    clearTimeout(advanceTimer);
+    const list = visList();
+    if (list.indexOf(q) < list.length - 1) advanceTimer = setTimeout(() => go(1), 420);
+    return;
+  }
+  let v = Array.isArray(state.ans[q.id]) ? state.ans[q.id].slice() : [];
+  const opt = q.opts.find((o) => o[0] === id);
+  const exclusive = opt && opt[6];
+  if (v.includes(id)) v = v.filter((x) => x !== id);
+  else {
+    if (exclusive) v = [id];
+    else {
+      v = v.filter((x) => !(q.opts.find((o) => o[0] === x) || [])[6]);
+      if (q.max && v.length >= q.max) {
+        const n = $("nudge"); n.textContent = t("maxw", { m: q.max }); n.classList.add("warn");
+        el.animate?.([{ transform: "translateX(0)" }, { transform: "translateX(-5px)" }, { transform: "translateX(5px)" }, { transform: "translateX(0)" }], { duration: 260 });
+        return;
+      }
+      v.push(id);
+    }
+  }
+  state.ans[q.id] = v;
+  stage.querySelectorAll("[data-opt]").forEach((b) => { const on = v.includes(b.dataset.opt); b.classList.toggle("on", on); b.setAttribute("aria-checked", on); });
+  updateChrome(); saveDraft();
+}
+
+/* ---------- Saving ---------- */
+const capsReady = (async () => {
+  const c = window.claude;
+  if (!c || typeof c.use !== "function") return { mode: "web" };
+  try {
+    const db = await c.use("db");
+    const user = db ? await c.use("user") : null;
+    const uid = user && user.id ? await user.id() : null;
+    return db && uid ? { mode: "claude", db, uid } : { mode: "preview" };
+  } catch (e) { return { mode: "preview" }; }
+})();
+
+function groupCode() {
+  let g = "";
+  try { g = new URLSearchParams(location.search).get("g") || location.hash.slice(1); } catch (e) {}
+  g = (g || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 32);
+  return g === "reset" ? "" : g;
+}
+
+function payload() {
+  const out = { v: CONFIG.version, lang: lang(), group: groupCode(), product: state.ans.q4 || "",
+    durationSec: state.startedAt ? Math.round((Date.now() - state.startedAt) / 1000) : null };
+  QS.forEach((q) => { if (!visible(q)) return; const v = state.ans[q.id]; if (v != null && v !== "" && !(Array.isArray(v) && !v.length)) out[q.id] = v; });
+  return out;
+}
+
+function setStatus(st) {
+  state.status = st; saveDraft();
+  const box = $("statusBox");
+  if (box) box.innerHTML = statusHTML(); else render(1);
+}
+
+async function send() {
+  if ($("statusBox")) setStatus("saving"); else { state.status = "saving"; render(1); }
+  const data = payload();
+  try {
+    const caps = await capsReady;
+    if (caps.mode === "claude") {
+      await caps.db.doc("responses/" + caps.uid).set({ ...data, submittedAt: new Date().toISOString() });
+      state.status = "saved";
+    } else if (caps.mode === "preview") {
+      state.status = "preview";
+    } else {
+      const r = await fetch("/api/submit", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, website: $("website").value }) });
+      if (!r.ok) throw new Error("status " + r.status);
+      state.status = "saved";
+    }
+  } catch (e) {
+    state.status = "error";
+  }
+  setStatus(state.status);
+}
+
+function finish() { state.screen = "done"; send(); }
+
+/* ---------- Events ---------- */
+stage.addEventListener("click", (e) => {
+  const act = e.target.closest("[data-act]");
+  if (act) {
+    if (act.dataset.act === "start") {
+      state.screen = "q"; state.i = 0; if (!state.startedAt) state.startedAt = Date.now(); render(1);
+    } else if (act.dataset.act === "retry") send();
+    else if (act.dataset.act === "restart") resetSurvey();
+    return;
+  }
+  const lg = e.target.closest("[data-lang]");
+  if (lg) { setLang(lg.dataset.lang); render(0); const f = stage.querySelector(`[data-lang="${lg.dataset.lang}"]`); if (f) f.focus({ preventScroll: true }); return; }
+  const w = e.target.closest("[data-want]");
+  if (w) { const on = !w.classList.contains("on"); w.classList.toggle("on", on); w.setAttribute("aria-pressed", on); const er = $("ferr"); if (er) er.textContent = ""; return; }
+  const b = e.target.closest("[data-opt]");
+  if (b && state.screen === "q") choose(QS[state.i], b.dataset.opt, b);
+});
+stage.addEventListener("submit", (e) => {
+  if (e.target.id === "signup") { e.preventDefault(); sendContact(); }
+});
+stage.addEventListener("input", (e) => {
+  if (e.target.tagName === "TEXTAREA") {
+    const q = QS[state.i]; state.ans[q.id] = e.target.value;
+    const c = $("counter"); if (c) c.textContent = `${e.target.value.length} / 1000`;
+    updateChrome(); saveDraft();
+  }
+});
+$("next").addEventListener("click", () => go(1));
+$("back").addEventListener("click", () => go(-1));
+$("about").addEventListener("click", () => { state.i = QS.findIndex((q) => q.id === "q4"); render(-1); });
+document.addEventListener("keydown", (e) => {
+  if (state.screen !== "q" || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target.tagName === "TEXTAREA") return;
+  if (/^[1-9]$/.test(e.key)) {
+    const b = stage.querySelector(`[data-n="${e.key}"]`);
+    if (b) { e.preventDefault(); choose(QS[state.i], b.dataset.opt, b); }
+  } else if (e.key === "Enter" && !e.target.closest("button")) { e.preventDefault(); go(1); }
+});
+
+/* ---------- Start ---------- */
+function setLang(l) {
+  state.lang = l === "nl" ? "nl" : "en";
+  document.documentElement.lang = state.lang;
+}
+
+function resetSurvey() {
+  state = { screen: "welcome", i: 0, ans: {}, startedAt: 0, status: "", contactSent: false, lang: state.lang };
+  playedOnce = false; drops = 0; parts = [];
+  try { localStorage.removeItem(KEY); } catch (e) {}
+  render(-1);
+}
+
+function start(data) {
+  let wantsReset = false;
+  try { wantsReset = location.hash === "#reset"; } catch (e) {}
+  if (wantsReset) { try { localStorage.removeItem(KEY); } catch (e) {} }
+  const s = wantsReset ? null : ((data && data.state) || loadDraft());
+  if (s) {
+    state = { ...state, ...s };
+    if (state.screen === "done" && state.status !== "saved" && state.status !== "preview") state.status = "error";
+  }
+  let want = "";
+  try { want = (new URLSearchParams(location.search).get("lang") || "").toLowerCase(); } catch (e) {}
+  if (want === "nl" || want === "en") setLang(want);
+  else if (!state.lang) setLang(/^nl\b/i.test(navigator.language || "") ? "nl" : "en");
+  else setLang(state.lang);
+  render(1);
+}
+window.claude?.hot?.snapshot?.(() => ({ state }));
+const hot = window.claude?.hot;
+if (hot?.ready) hot.ready(start); else start(hot?.data ?? {});
+</script>
+</body></html>
