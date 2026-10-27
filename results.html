@@ -101,6 +101,47 @@ section { margin-top: 28px; }
 .open .m { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
 .wide { grid-column: 1 / -1; }
 
+.panel { border: 1.5px solid var(--line); border-radius: 22px; }
+.panel > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; }
+.panel > summary::-webkit-details-marker { display: none; }
+.panel > summary > span:first-child { display: flex; flex-direction: column; gap: 2px; }
+.panel > summary h2 { font-size: 20px; }
+.chev { width: 40px; height: 40px; flex: none; border-radius: 50%; background: var(--panel); position: relative; }
+.chev::before { content: ""; position: absolute; left: 14px; top: 12px; width: 10px; height: 10px; border-right: 2.5px solid var(--ink); border-bottom: 2.5px solid var(--ink); transform: rotate(45deg); transition: transform .2s; }
+.panel[open] .chev::before { transform: translate(0, 5px) rotate(-135deg); }
+.panel-body { padding: 0 20px 20px; }
+.ins-head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.conf { font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 99px; background: var(--panel); }
+.conf.signal { background: var(--blue-soft); }
+.conf.solid { background: var(--green-soft); }
+.summary { background: var(--green-soft); border-radius: 22px; padding: 20px 22px; }
+.summary h3 { font-size: 19px; margin-bottom: 10px; }
+.summary ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
+.summary li { font-size: 16px; line-height: 1.45; }
+.summary .act { display: block; color: var(--muted); font-size: 14px; margin-top: 2px; }
+.summary p { margin: 0; }
+.notes { margin-top: 14px; border: 1.5px solid #f0d9a6; background: #fffaf0; border-radius: 18px; padding: 16px 20px; }
+.notes h3 { font-size: 16px; margin-bottom: 6px; }
+.notes ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+h3.area { font-size: 17px; margin: 26px 0 10px; }
+.dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; }
+.dcard { border: 1.5px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.dtop { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; }
+.pill svg { width: 14px; height: 14px; }
+.pill.keep { background: var(--green-soft); color: #1f5f52; }
+.pill.change { background: #fff1cf; color: #7a4a0e; }
+.pill.watch { background: var(--panel); color: var(--muted); }
+.dcard.watch { opacity: .75; }
+.dn { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dcard h4 { margin: 0; font-family: var(--f-display); font-size: 16px; font-weight: 650; }
+.hl { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.4; }
+.ev { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 1px; }
+.next { margin: 4px 0 0; font-size: 14px; padding-top: 8px; border-top: 1px solid var(--line); }
+.segs { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.themes { display: flex; flex-wrap: wrap; gap: 8px; }
+.theme { font-size: 14px; padding: 6px 12px; border-radius: 99px; background: var(--blue-soft); }
+.theme b { font-variant-numeric: tabular-nums; margin-right: 4px; }
 .tip { position: fixed; z-index: 20; pointer-events: none; background: var(--ink); color: #fff; border-radius: 10px; padding: 8px 10px; font-size: 13px; max-width: 260px; opacity: 0; transition: opacity .12s; }
 .tip b { font-size: 15px; }
 .tip.on { opacity: 1; }
@@ -204,14 +245,25 @@ function shell() {
       <div class="feed" id="feed"></div>
     </section>
     <section>
-      <div class="sec-head"><h2>Analytics</h2><span class="sub">Filters apply to every chart below.</span></div>
-      <div class="filters" id="filters"></div>
-      <div class="charts" id="charts" style="margin-top:16px"></div>
+      <details class="panel" id="detail">
+        <summary><span><h2>Detailed results</h2><span class="sub">Every question as a chart, with filters</span></span><span class="chev" aria-hidden="true"></span></summary>
+        <div class="panel-body">
+          <div class="filters" id="filters"></div>
+          <div class="charts" id="charts" style="margin-top:16px"></div>
+        </div>
+      </details>
+    </section>
+    <section>
+      <div class="sec-head"><h2>Analysis</h2><span class="sub">What the answers mean for the product, decision by decision.</span></div>
+      <div id="insights"></div>
     </section>
     <p class="foot"><span>Percentages are of people who answered that question. On questions where people could pick several, they add up to more than 100%.</span><span>Signals turn on from ${MIN_N} answers.</span></p>
   </main>`;
   $("#csv").addEventListener("click", (e) => { e.preventDefault(); location.href = `/api/export?key=${encodeURIComponent(key)}`; });
   $("#forget").addEventListener("click", () => { try { localStorage.removeItem(KEYSTORE); } catch (e) {} clearInterval(timer); timer = 0; key = ""; data = null; seen = new Set(); firstLoad = true; gate(); });
+  const det = $("#detail");
+  try { det.open = localStorage.getItem("skincare-results-open") === "1"; } catch (e) {}
+  det.addEventListener("toggle", () => { try { localStorage.setItem("skincare-results-open", det.open ? "1" : "0"); } catch (e) {} });
   $("#filters").addEventListener("change", (e) => { const n = e.target.name; if (n in F) { F[n] = e.target.value; renderAnalytics(); } });
 }
 
@@ -227,7 +279,7 @@ setInterval(tickLive, 5000);
 function renderAll() {
   const rows = (data.responses || []).slice().sort((a, b) => (b.receivedAt || "").localeCompare(a.receivedAt || ""));
   data.sorted = rows;
-  renderKpis(rows); renderFeed(rows); renderFilters(rows); renderAnalytics();
+  renderKpis(rows); renderFeed(rows); renderFilters(rows); renderAnalytics(); renderInsights();
   rows.forEach((r) => seen.add(rid(r))); firstLoad = false; tickLive();
 }
 
@@ -349,6 +401,207 @@ function renderAnalytics() {
   }).join("");
   const ch = $("#charts");
   ch.innerHTML = (data.sorted || []).length ? html : `<div class="empty wide">Charts appear here once the first answers arrive.</div>`;
+}
+
+/* ---------- Insights: what the answers mean for the product ---------- */
+const TONE_DEEP = ["t5", "t6", "t7", "t8"], TONE_LIGHT = ["t1", "t2", "t3", "t4"];
+function answeredRows(rows, qid) { return rows.filter((r) => Array.isArray(r[qid]) ? r[qid].length : r[qid] != null && r[qid] !== "" && r[qid] !== "na"); }
+function share(rows, qid, vals) {
+  const a = answeredRows(rows, qid);
+  const k = a.filter((r) => (Array.isArray(r[qid]) ? r[qid] : [r[qid]]).some((v) => vals.includes(v))).length;
+  return { k, n: a.length, p: pct(k, a.length) };
+}
+function modeOf(rows, qid) {
+  const q = Q[qid], { n, c } = counts(rows, q);
+  const best = q.opts.reduce((a, o) => (c[o[0]] > c[a[0]] ? o : a), q.opts[0]);
+  return { id: best[0], label: best[1], p: pct(c[best[0]], n), n };
+}
+function confidence(n) {
+  if (n < MIN_N) return { cls: "early", text: `Too early · ${n} answers` };
+  if (n < 100) return { cls: "signal", text: `Early signal · ${n} answers` };
+  return { cls: "solid", text: `Solid · ${n} answers` };
+}
+const V = {
+  keep: { cls: "keep", label: "Keep the plan", icon: `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
+  change: { cls: "change", label: "Change the plan", icon: `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h10M9 4.5L12.5 8 9 11.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
+  watch: { cls: "watch", label: "Too early to call", icon: `<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 5v3.5l2 1.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>` }
+};
+
+function decisions(rows) {
+  const out = [];
+  const add = (area, title, n, verdict, headline, evidence, action) => out.push({ area, title, n, verdict: n < MIN_N ? "watch" : verdict, headline, evidence, action });
+
+  // 1. Home screen: chat or match list
+  { const y = share(rows, "q11", ["yes"]), w = share(rows, "q11", ["reviews"]), no = share(rows, "q11", ["no"]), t = y.p + w.p;
+    add("Product shape", "Chat as the home screen", y.n, t >= 50 ? "keep" : "change",
+      `${t}% would trust an AI chat to pick a product, ${w.p}% of them only with real reviews.`,
+      [`Yes: ${y.p}%`, `Only with reviews from real women: ${w.p}%`, `No: ${no.p}%`],
+      t < 50 ? "Make the match list the home screen and keep the chat as a helper you open from it."
+        : w.p >= y.p ? "Keep the chat, but every chat answer should show the peer reviews it is based on. That is what earns the trust."
+        : "Keep the chat as the home screen. Reviews can stay one tap away."); }
+
+  // 2. Review format
+  { const a = share(rows, "q10", ["a"]), b = share(rows, "q10", ["b"]), both = share(rows, "q10", ["both"]);
+    const lead = both.p >= Math.max(a.p, b.p) ? "both" : a.p >= b.p ? "a" : "b";
+    add("Trust", "How reviews are shown", a.n, lead === "b" ? "change" : "keep",
+      lead === "both" ? `Most want both: the “women like you” score and the familiar stars (${both.p}%).`
+        : lead === "a" ? `The “11 of 14 women like you” score wins over stars (${a.p}% vs ${b.p}%).`
+        : `Stars win over the “women like you” score (${b.p}% vs ${a.p}%).`,
+      [`Option A, women like you: ${a.p}%`, `Option B, stars: ${b.p}%`, `Both together: ${both.p}%`],
+      lead === "a" ? "Lead with the would-buy-again score. Stars are not needed on the main card."
+        : lead === "both" ? "Show the would-buy-again score as the headline and the star average beside it."
+        : "Show the star average first and add the “women like you” score as the second line, then test again."); }
+
+  // 3. Minimum review count
+  { const m = modeOf(rows, "q14");
+    add("Trust", "Minimum number of reviews", m.n, "keep",
+      m.id === "any" ? `The number of reviews doesn't matter to most (${m.p}%).` : `Most want at least ${m.id} reviews from women like them (${m.p}%).`,
+      Q.q14.opts.map((o) => `${o[1]}: ${share(rows, "q14", [o[0]]).p}%`),
+      m.id === "any" ? "Show “women like you” results from 3 reviews and say how many there are."
+        : `Show “women like you” results from ${m.id} reviews. Below that, show all reviews and say why. You'll need about ${m.id} reviews per product per skin type before launch.`); }
+
+  // 4. Give-to-get
+  { const neg = share(rows, "q13", ["pushy", "stop"]), ex = share(rows, "q13", ["explain"]);
+    add("Reviews", "Review one to unlock all", neg.n, neg.p > 30 ? "change" : "keep",
+      `${neg.p}% find it pushy or would stop; ${ex.p}% are fine if you explain why.`,
+      Q.q13.opts.map((o) => `${o[1]}: ${share(rows, "q13", [o[0]]).p}%`),
+      neg.p > 30 ? "Don't lock reviews at the start. Ask for the first review after she has seen a few matches, or after a week."
+        : ex.p >= 25 ? "Keep the unlock, and always say in one line why you ask: her review helps women with skin like hers."
+        : "Keep the unlock as designed."); }
+
+  // 5. Skin questions in onboarding
+  { const u = share(rows, "q3", ["unsure"]);
+    add("Matching", "Asking how her skin feels", u.n, u.p > 20 ? "change" : "keep",
+      `${u.p}% don't know how their skin feels by midday.`,
+      Q.q3.opts.map((o) => `${o[1]}: ${share(rows, "q3", [o[0]]).p}%`),
+      u.p > 20 ? "Make the 1-minute skin test the default path, not the “not sure?” link." : "Keep the simple tap question; the skin test can stay optional."); }
+  { const no = share(rows, "q12", ["no"]), mb = share(rows, "q12", ["maybe"]), y = share(rows, "q12", ["yes"]);
+    add("Matching", "Asking about skin concerns", no.n, no.p > 50 ? "change" : "keep",
+      `${y.p}% would share concerns, ${mb.p}% maybe, ${no.p}% would not.`,
+      [`Yes: ${y.p}%`, `Maybe, if it's clear what happens: ${mb.p}%`, `No: ${no.p}%`],
+      no.p > 50 ? "Drop the concerns question at launch. Match on skin feel, tone, age and budget only."
+        : mb.p >= y.p ? "Keep it optional, and show a short plain line on what happens with it before she answers."
+        : "Keep the optional concerns question with its separate consent."); }
+
+  // 6. Catalogue
+  { const s = share(rows, "q4", ["sunscreen"]), m = share(rows, "q4", ["moisturiser"]);
+    const big = Math.max(s.k, m.k), small = Math.max(1, Math.min(s.k, m.k)), which = s.k >= m.k ? "sunscreen" : "moisturiser";
+    add("Catalogue", "Which product to build first", s.n, big >= 3 * small ? "change" : "keep",
+      big >= 3 * small ? `${which === "sunscreen" ? s.p : m.p}% answered about ${which}, three times as many as the other.` : `Sunscreen ${s.p}%, moisturiser ${m.p}%: neither dominates.`,
+      [`Sunscreen: ${s.p}%`, `Moisturiser: ${m.p}%`, `Neither: ${share(rows, "q4", ["neither"]).p}%`],
+      big >= 3 * small ? `Launch with ${which} only, and add the other later.` : "Launch with both; neither dominates."); }
+  { const low = Q.q5.opts.filter((o) => o[0] !== "else" && share(rows, "q5", [o[0]]).p < 10).map((o) => o[1]);
+    const n = answeredRows(rows, "q5").length;
+    add("Catalogue", "Which shops to cover", n, low.length ? "change" : "keep",
+      low.length ? `${low.join(", ")} ${low.length > 1 ? "are" : "is"} under 10%.` : "Every shop is used by 10% or more.",
+      Q.q5.opts.map((o) => `${o[1]}: ${share(rows, "q5", [o[0]]).p}%`),
+      low.length ? `Leave ${low.join(" and ")} out of the launch catalogue.` : "Keep all five shops in the catalogue."); }
+  { const u = share(rows, "q9", ["u10", "10-20"]);
+    add("Catalogue", "Price range", u.n, "keep",
+      `${u.p}% usually spend under €20.`,
+      Q.q9.opts.map((o) => `${o[1]}: ${share(rows, "q9", [o[0]]).p}%`),
+      u.p > 50 ? "Fill the catalogue with drugstore products first and default the budget filter to under €20." : "Cover pharmacy and Douglas price ranges too; budget is not the main filter."); }
+  { const { n, c } = counts(rows, Q.q8);
+    const top = Q.q8.opts.slice().sort((a, b) => c[b[0]] - c[a[0]]).slice(0, 3);
+    add("Matching", "Filters shown first", n, "keep",
+      `Top 3: ${top.map((o) => o[1]).join(", ")}.`,
+      top.map((o) => `${o[1]}: ${pct(c[o[0]], n)}%`),
+      `Show ${top.map((o) => o[1].toLowerCase()).join(", ")} as the first filter chips on the match list.`); }
+
+  // 7. Check-in timing
+  { const m = modeOf(rows, "q7");
+    add("Reviews", "When to ask for the check-in", m.n, "keep",
+      `Most can tell after ${m.label.toLowerCase()} (${m.p}%).`,
+      Q.q7.opts.map((o) => `${o[1]}: ${share(rows, "q7", [o[0]]).p}%`),
+      `Send the first check-in after ${m.label.toLowerCase()}, with a second one later for slower products.`); }
+  return out;
+}
+
+function sampleNotes(rows) {
+  const notes = [];
+  const n = rows.length;
+  const tones = share(rows, "q1", TONE_DEEP);
+  if (tones.n >= 10 && tones.p < 25) notes.push(`Only ${tones.p}% of answers are from deeper skin tones (5–8). White-cast results mostly reflect lighter skin, so share the survey in more diverse groups.`);
+  const ages = Q.q2.opts.map((o) => [o[1], rows.filter((r) => r.q2 === o[0]).length]);
+  const thin = ages.filter(([, k]) => k < 30).map(([l]) => l);
+  if (n >= 30 && thin.length) notes.push(`Under 30 answers in: ${thin.join(", ")}. Treat age comparisons there as hints.`);
+  const g = {}; rows.forEach((r) => { const k = r.group || "no group code"; g[k] = (g[k] || 0) + 1; });
+  const big = Object.entries(g).sort((a, b) => b[1] - a[1])[0];
+  if (n >= 20 && big && big[1] / n > .5) notes.push(`${pct(big[1], n)}% of answers come from “${big[0]}”. One group can tilt the results; compare it with the others using the Group filter.`);
+  const nl = rows.filter((r) => r.lang === "nl").length;
+  if (n >= 20 && pct(nl, n) < 30) notes.push(`Only ${pct(nl, n)}% answered in Dutch. Share the Dutch link (?lang=nl) to reach more women who don't use English daily.`);
+  return notes;
+}
+
+function segments(rows) {
+  const out = [];
+  const cmp = (label, a, b, qid, vals, what) => {
+    const x = share(a, qid, vals), y = share(b, qid, vals);
+    if (x.n >= 10 && y.n >= 10 && Math.abs(x.p - y.p) >= 15) out.push({ text: `${what}: ${label[0]} ${x.p}% vs ${label[1]} ${y.p}%.`, gap: Math.abs(x.p - y.p) });
+  };
+  const by = (qid, vals) => rows.filter((r) => vals.includes(r[qid]));
+  const deep = by("q1", TONE_DEEP), light = by("q1", TONE_LIGHT);
+  cmp(["deeper tones", "lighter tones"], deep, light, "q8", ["nocast"], "“No white cast” matters to");
+  const young = by("q2", ["18-24", "25-34"]), older = by("q2", ["35-44", "45-54", "55+"]);
+  cmp(["under 35", "35 and older"], young, older, "q11", ["yes", "reviews"], "Would trust an AI chat");
+  cmp(["under 35", "35 and older"], young, older, "q9", ["u10", "10-20"], "Spend under €20");
+  cmp(["under 35", "35 and older"], young, older, "q6", ["social"], "Picked it through social media");
+  cmp(["under 35", "35 and older"], young, older, "q13", ["pushy", "stop"], "Find review-to-unlock pushy");
+  const nl = by("lang", ["nl"]), en = by("lang", ["en"]);
+  cmp(["Dutch", "English"], nl, en, "q11", ["yes", "reviews"], "Would trust an AI chat, answering in");
+  const sun = by("q4", ["sunscreen"]), moi = by("q4", ["moisturiser"]);
+  cmp(["sunscreen", "moisturiser"], sun, moi, "q6", ["friend"], "Picked on a friend's tip, for");
+  return out.sort((a, b) => b.gap - a.gap).slice(0, 6);
+}
+
+const THEMES = [
+  ["Sunscreen and SPF", /spf|sunscreen|zonnebrand|zon\b|sun\b|uv/i],
+  ["Spots and breakouts", /acne|puist|pimple|spot|breakout|mee-?eter/i],
+  ["Dry or tight skin", /dry|droog|tight|strak|flak|schilfer/i],
+  ["Oily or shiny skin", /oil|vet|shin|glim|glans/i],
+  ["Sensitive skin, stinging", /sensit|gevoelig|sting|prik|brand|red|rood|irrit/i],
+  ["Ingredients", /ingredi|retinol|niacin|acid|zuur|parfum|fragrance|alcohol/i],
+  ["Price and value", /price|prijs|cheap|goedkoop|budget|duur|expens/i],
+  ["Make-up", /make-?up|foundation|pill/i],
+  ["Ageing, lines, spots", /wrinkle|rimpel|aging|anti-?age|pigment|dark spot|vlek/i]
+];
+function themes(rows) {
+  const texts = rows.map((r) => r.q15).filter((t) => t && String(t).trim());
+  return { n: texts.length, list: THEMES.map(([name, re]) => [name, texts.filter((t) => re.test(t)).length]).filter(([, k]) => k > 0).sort((a, b) => b[1] - a[1]) };
+}
+
+function renderInsights() {
+  const rows = data.sorted || [];
+  const box = $("#insights"); if (!box) return;
+  const conf = confidence(rows.length);
+  if (!rows.length) { box.innerHTML = `<div class="empty">The analysis appears here once answers come in.</div>`; return; }
+  const ds = decisions(rows);
+  const ready = ds.filter((d) => d.verdict !== "watch");
+  const top = [...ready.filter((d) => d.verdict === "change"), ...ready.filter((d) => d.verdict === "keep")].slice(0, 3);
+  const notes = sampleNotes(rows), segs = segments(rows), th = themes(rows);
+  const areas = [...new Set(ds.map((d) => d.area))];
+  box.innerHTML = `
+    <div class="ins-head"><span class="conf ${conf.cls}">${esc(conf.text)}</span><span class="sub">Based on all answers; the filters above don't apply here.</span></div>
+    <div class="summary">
+      <h3>What the survey says so far</h3>
+      ${top.length ? `<ol>${top.map((d) => `<li><b>${esc(d.title)}:</b> ${esc(d.headline)} <span class="act">${esc(d.action)}</span></li>`).join("")}</ol>`
+        : `<p>Each decision needs at least ${MIN_N} answers before it's called. ${Math.max(0, MIN_N - rows.length)} more to go.</p>`}
+    </div>
+    ${notes.length ? `<div class="notes"><h3>Before you trust these numbers</h3><ul>${notes.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}
+    ${areas.map((a) => `<h3 class="area">${esc(a)}</h3><div class="dgrid">${ds.filter((d) => d.area === a).map((d) => `
+      <article class="dcard ${V[d.verdict].cls}">
+        <div class="dtop"><span class="pill ${V[d.verdict].cls}">${V[d.verdict].icon}${esc(V[d.verdict].label)}</span><span class="dn">${d.n} answers</span></div>
+        <h4>${esc(d.title)}</h4>
+        <p class="hl">${esc(d.headline)}</p>
+        <ul class="ev">${d.evidence.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>
+        <p class="next"><b>Next step:</b> ${esc(d.action)}</p>
+      </article>`).join("")}</div>`).join("")}
+    <h3 class="area">Differences between groups</h3>
+    ${segs.length ? `<ul class="segs">${segs.map((s) => `<li>${esc(s.text)}</li>`).join("")}</ul><p class="sub">Shown when both groups have 10 or more answers and differ by 15 points or more.</p>`
+      : `<p class="sub">No clear differences yet. They show up when two groups each have 10 or more answers and differ by 15 points or more.</p>`}
+    <h3 class="area">What women would ask a skincare chat</h3>
+    ${th.list.length ? `<div class="themes">${th.list.map(([name, k]) => `<span class="theme"><b>${k}</b> ${esc(name)}</span>`).join("")}</div><p class="sub">From ${th.n} written answers to Q15, sorted by keyword. Use the biggest themes as the chat's starter chips and in the knowledge base.</p>`
+      : `<p class="sub">No written answers to sort yet.</p>`}`;
 }
 
 const tip = $("#tip");
