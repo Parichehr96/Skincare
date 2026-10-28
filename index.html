@@ -170,14 +170,13 @@ h2 .scn { font-weight: 500; }
 .brand .tx { display: flex; flex-direction: column; min-width: 0; }
 .brand .t { font-weight: 700; font-size: 14.5px; line-height: 1.2; overflow-wrap: break-word; hyphens: manual; }
 .brand .d { font-size: 12px; color: var(--muted); line-height: 1.25; }
-.mono { flex: none; width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; font-family: var(--f-display); font-weight: 700; font-size: 15px; letter-spacing: -.02em; color: var(--ink); }
-.mono.m0 { background: var(--accent-soft); }
-.mono.m1 { background: var(--blue-soft); }
-.mono.m2 { background: #eef0fb; }
-.brand.on .mono { background: var(--accent); }
-.brand.on .mono svg { width: 16px; height: 16px; stroke: var(--accent-ink); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.brand.on.extra .mono { border-color: var(--accent); }
-.extra .mono { background: transparent; border: 1.5px dashed var(--line); }
+.mono { flex: none; width: 40px; height: 40px; display: grid; place-items: center; font-family: var(--f-display); font-weight: 700; font-size: 15px; color: var(--ink); }
+.mono svg { display: block; }
+.mono .xs, .mono .tick { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; }
+.brand.on .mono .tick { background: var(--accent); }
+.brand.on .mono .tick svg { width: 16px; height: 16px; stroke: var(--accent-ink); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.extra .mono .xs { border: 1.5px dashed var(--line); }
+
 .otherin { width: 100%; min-height: 50px; padding: 0 16px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; margin-top: -10px; }
 .otherin:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .tone { display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
@@ -466,18 +465,18 @@ const QS = [
            ["neither", "Neither", "We'll skip a few questions", "none", true]] },
   { id: "q5", type: "single", layout: "brands", title: "Which brand is your {p}?", hint: "Pick the one you use now.",
     opts: [] /* filled from BRANDS below */ },
-  { id: "q6", type: "multi", max: 2, layout: "cards", title: "How did you pick your {pb}?", hint: "Pick up to 2.",
+  { id: "q6", type: "multi", max: 2, layout: "cards", title: "How did you pick your {p}?", hint: "Pick up to 2.",
     opts: [["friend", "A friend or family member", "recommended it", "friend"], ["staff", "Shop staff", "advised me", "staff"],
            ["social", "Social media", "I saw it there", "social"], ["reviews", "Online reviews", "I read them", "reviews"],
            ["pro", "A doctor or skin therapist", "advised it", "pro"], ["offer", "It was on offer", "", "offer"]] },
-  { id: "q7", type: "single", layout: "rows", title: "After how long could you tell whether your {pb} works for you?",
+  { id: "q7", type: "single", layout: "rows", title: "After how long could you tell whether your {p} works for you?",
     opts: [["days", "A few days", "", null, false, 6], ["week", "About a week", "", null, false, 16], ["2-3w", "2–3 weeks", "", null, false, 38],
            ["4-6w", "4–6 weeks", "", null, false, 72], ["longer", "Longer than that", "", null, false, 100]] },
   { id: "q8", type: "multi", max: 3, layout: "cards", title: "What matters most when you choose a {p}?", hint: "Pick up to 3.",
     opts: [["price", "Low price", "", "price"], ["nofrag", "Fragrance-free", "", "nofrag"], ["spf", "Has SPF", "", "spf"],
            ["light", "Light texture", "", "light"], ["nocast", "No white cast", "", "nocast"], ["makeup", "Works under makeup", "", "makeup"],
            ["ingredients", "Ingredients", "What's in it, or what isn't", "ingredients", true]] },
-  { id: "q9", type: "single", layout: "chips", title: "How much do you usually spend on your {pb}?",
+  { id: "q9", type: "single", layout: "chips", title: "How much do you usually spend on your {p}?",
     opts: [["u10", "Under €10"], ["10-20", "€10–20"], ["20-35", "€20–35"], ["35+", "More than €35"]] },
   { id: "q10", type: "single", layout: "compare", title: "Which helps you more when choosing?", hint: "Two ways to show reviews for the same {p}.",
     opts: [["a", "A"], ["b", "B"], ["both", "Both together"], ["neither", "Neither"]] },
@@ -592,15 +591,15 @@ const NLQ = {
   q4: { title: "Welke van deze gebruik je op je gezicht?", hint: "Gebruik je ze allebei? Kies degene waarover je wilt antwoorden.",
     opts: { sunscreen: ["Zonnebrand"], moisturiser: ["Dagcrème", "Met of zonder SPF"], neither: ["Geen van beide", "We slaan een paar vragen over"] } },
   q5: { title: "Welk merk is je {p}?", hint: "Kies het merk dat je nu gebruikt.", opts: { store: ["Een huismerk"], other: ["Iets anders"] } },
-  q6: { title: "Hoe heb je je {pb} gekozen?", hint: "Kies er maximaal 2.",
+  q6: { title: "Hoe heb je je {p} gekozen?", hint: "Kies er maximaal 2.",
     opts: { friend: ["Een vriendin of familielid", "raadde het aan"], staff: ["Winkelpersoneel", "gaf me advies"], social: ["Social media", "daar zag ik het"],
             reviews: ["Online reviews", "die heb ik gelezen"], pro: ["Een arts of huidtherapeut", "raadde het aan"], offer: ["Het was in de aanbieding"] } },
-  q7: { title: "Na hoe lang kon je zien of je {pb} goed werkt voor jou?",
+  q7: { title: "Na hoe lang kon je zien of je {p} goed werkt voor jou?",
     opts: { days: ["Een paar dagen"], week: ["Ongeveer een week"], "2-3w": ["2–3 weken"], "4-6w": ["4–6 weken"], longer: ["Langer dan dat"] } },
   q8: { title: "Wat vind je het belangrijkst bij het kiezen van een {p}?", hint: "Kies er maximaal 3.",
     opts: { price: ["Lage prijs"], nofrag: ["Parfumvrij"], spf: ["Met SPF"], light: ["Lichte textuur"], nocast: ["Geen witte waas"], makeup: ["Werkt onder make-up"],
             ingredients: ["Ingrediënten", "Wat erin zit, of juist niet"] } },
-  q9: { title: "Hoeveel geef je meestal uit aan je {pb}?", opts: { u10: ["Minder dan €10"], "35+": ["Meer dan €35"] } },
+  q9: { title: "Hoeveel geef je meestal uit aan je {p}?", opts: { u10: ["Minder dan €10"], "35+": ["Meer dan €35"] } },
   q10: { title: "Wat helpt je meer bij het kiezen?", hint: "Twee manieren om reviews voor dezelfde {p} te tonen.", opts: { both: ["Allebei samen"], neither: ["Geen van beide"] } },
   q11: { title: "Zou je een AI-chat vertrouwen om een {p} voor je te kiezen?",
     opts: { yes: ["Ja"], reviews: ["Alleen als die reviews van echte vrouwen laat zien"], no: ["Nee"], unsure: ["Weet ik niet zeker"] } },
@@ -637,16 +636,7 @@ function loadDraft() {
   return null;
 }
 const product = () => { const p = UI[lang()].product; return state.ans.q4 === "sunscreen" ? p.sunscreen : state.ans.q4 === "moisturiser" ? p.moisturiser : p.either; };
-const brandName = () => {
-  const v = state.ans.q5;
-  if (!v || state.ans.q4 === "neither") return "";
-  if (v === "store") return t("storeBrand");
-  if (v === "other") return (state.ans.q5o || "").trim().slice(0, 30);
-  const b = (BRANDS[state.ans.q4] || []).find((x) => x[0] === v);
-  return b ? b[1] : "";
-};
-const productPhrase = () => { const b = brandName(); return b ? `${b} ${product()}` : product(); };
-const fill = (t) => t.replace("{pb}", productPhrase()).replace("{p}", product());
+const fill = (t) => t.replace("{p}", product());
 const visible = (q) => !(state.ans.q4 === "neither" && (q.id === "q5" || q.id === "q6" || q.id === "q7"));
 const visList = () => QS.filter(visible);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -703,6 +693,14 @@ function heroSVG() {
   </svg>`;
 }
 
+const BADGE_FILLS = ["#e1f3ea", "#e1eefb", "#eceefb", "#f6e3df", "#f7efd3"];
+function brandBadge(initials, n, prod) {
+  const f = BADGE_FILLS[n % BADGE_FILLS.length], ink = "var(--ink)";
+  const shape = prod === "sunscreen"
+    ? `<path d="M6 2.5h22l-2.6 23H8.6z" fill="${f}" stroke="${ink}" stroke-width="1.6" stroke-linejoin="round"/><rect x="9.5" y="25.5" width="15" height="6.5" rx="1.6" fill="#ffffff" stroke="${ink}" stroke-width="1.6"/><text x="17" y="14.5" text-anchor="middle" dominant-baseline="middle" font-size="9.5" font-weight="700" fill="${ink}" font-family="var(--f-display)">${esc(initials)}</text>`
+    : `<rect x="5" y="6" width="24" height="6" rx="2" fill="#ffffff" stroke="${ink}" stroke-width="1.6"/><rect x="3.5" y="12" width="27" height="17" rx="5" fill="${f}" stroke="${ink}" stroke-width="1.6"/><text x="17" y="21" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="${ink}" font-family="var(--f-display)">${esc(initials)}</text>`;
+  return `<svg viewBox="0 0 34 34" width="40" height="40">${shape}</svg>`;
+}
 function optInner(o, q) {
   const [id, , , ill, wide, dur] = o;
   const [label, sub] = ol(q, o);
@@ -728,7 +726,7 @@ function questionHTML(q) {
       const name = isExtra ? ol(q, [b[0], b[1]])[0] : b[1];
       const sub = b[0] === "store" ? t("storeSub") : "";
       return `<button type="button" class="brand${on ? " on" : ""}${isExtra ? " extra" : ""}" role="radio" aria-checked="${on}" data-opt="${b[0]}"${n < 9 ? ` data-n="${n + 1}"` : ""}>
-        <span class="mono m${n % 3}" aria-hidden="true">${on ? CHECK : esc(b[2])}</span><span class="tx"><span class="t">${esc(name)}</span>${sub ? `<span class="d">${esc(sub)}</span>` : ""}</span></button>`;
+        <span class="mono" aria-hidden="true">${on ? `<span class="tick">${CHECK}</span>` : isExtra ? `<span class="xs">${esc(b[2])}</span>` : brandBadge(b[2], n, state.ans.q4)}</span><span class="tx"><span class="t">${esc(name)}</span>${sub ? `<span class="d">${esc(sub)}</span>` : ""}</span></button>`;
     }).join("") + `</div>` + (v === "other" ? `<label class="hint" for="q5o">${esc(t("otherLabel"))}</label>
       <input id="q5o" class="otherin" type="text" maxlength="40" autocomplete="off" placeholder="${esc(t("otherPh"))}" value="${esc(state.ans.q5o || "")}">` : "");
   } else if (q.type === "tone") {
@@ -811,7 +809,7 @@ function updateChrome() {
   const about = $("about");
   const chosen = state.ans.q4 === "sunscreen" || state.ans.q4 === "moisturiser";
   about.hidden = !(chosen && QS.indexOf(q) > QS.findIndex((x) => x.id === "q4"));
-  if (!about.hidden) about.innerHTML = `${svg(state.ans.q4 === "sunscreen" ? "tube" : "jar")}<span>${esc(t("aboutA"))} <b>${esc(productPhrase())}</b></span><span class="chg">${esc(t("change"))}</span>`;
+  if (!about.hidden) about.innerHTML = `${svg(state.ans.q4 === "sunscreen" ? "tube" : "jar")}<span>${esc(t("aboutA"))} <b>${esc(product())}</b></span><span class="chg">${esc(t("change"))}</span>`;
   $("back").innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>${esc(t("back"))}`;
   const last = pos === list.length;
   const nextBtn = $("next");
