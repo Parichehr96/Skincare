@@ -9,6 +9,7 @@ function clean(body) {
     if (Array.isArray(v)) out[k] = v.filter((x) => typeof x === "string").slice(0, 12).map((x) => x.slice(0, 40));
     else if (typeof v === "string") out[k] = v.slice(0, k === "q15" ? 1000 : 40);
   }
+  if (typeof body.q5o === "string") out.q5o = body.q5o.slice(0, 40);
   if (typeof body.product === "string") out.product = body.product.slice(0, 20);
   if (typeof body.group === "string") out.group = body.group.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 32);
   if (typeof body.lang === "string") out.lang = body.lang.slice(0, 5);

@@ -158,6 +158,28 @@ h2 .scn { font-weight: 500; }
 .dur i { display: block; height: 100%; background: var(--blue); border-radius: 99px; }
 
 /* Compare cards (Q9) */
+.brands { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.brand {
+  position: relative; display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 10px 8px 8px; min-width: 0;
+  border: 1.5px solid var(--line); border-radius: 16px; background: var(--surface); text-align: left; cursor: pointer;
+  transition: border-color .2s, background-color .2s, transform .12s;
+}
+.brand:hover { border-color: var(--accent); }
+.brand:active { transform: scale(.98); }
+.brand.on { border-color: var(--accent); background: var(--accent-soft); }
+.brand .tx { display: flex; flex-direction: column; min-width: 0; }
+.brand .t { font-weight: 700; font-size: 14.5px; line-height: 1.2; overflow-wrap: break-word; hyphens: manual; }
+.brand .d { font-size: 12px; color: var(--muted); line-height: 1.25; }
+.mono { flex: none; width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; font-family: var(--f-display); font-weight: 700; font-size: 15px; letter-spacing: -.02em; color: var(--ink); }
+.mono.m0 { background: var(--accent-soft); }
+.mono.m1 { background: var(--blue-soft); }
+.mono.m2 { background: #eef0fb; }
+.brand.on .mono { background: var(--accent); }
+.brand.on .mono svg { width: 16px; height: 16px; stroke: var(--accent-ink); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.brand.on.extra .mono { border-color: var(--accent); }
+.extra .mono { background: transparent; border: 1.5px dashed var(--line); }
+.otherin { width: 100%; min-height: 50px; padding: 0 16px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; margin-top: -10px; }
+.otherin:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .tone { display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
 .tprev { display: flex; align-items: center; gap: 14px; }
 .tsw { width: 64px; height: 64px; border-radius: 50%; border: 2px dashed var(--line); flex: none; transition: background-color .15s; }
@@ -414,6 +436,19 @@ const TONES = ["#f6ede4", "#f7ead0", "#eadaba", "#d7bd96", "#a07e56", "#825c43",
 const svg = (k, vb = "0 0 64 64") => `<svg viewBox="${vb}" aria-hidden="true" focusable="false">${ILL[k]}</svg>`;
 const CHECK = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>`;
 
+/* ---------- Brands (common in Dutch drugstores, 2026) ----------
+   Sunscreen: brands leading Kruidvat's face-sunscreen range, plus La Roche-Posay, Eucerin and Bioderma from Etos/pharmacy.
+   Moisturiser: Etos "top 10 beste dagcrème". Badges are our own initials, not brand logos. */
+const BRANDS = {
+  sunscreen: [["laroche", "La Roche-Posay", "LR"], ["biodermal", "Biodermal", "Bi"], ["nivea", "Nivea", "Ni"], ["cerave", "CeraVe", "Ce"],
+              ["garnier", "Garnier", "Ga"], ["joseon", "Beauty of Joseon", "BJ"], ["eucerin", "Eucerin", "Eu"],
+              ["bioderma", "Bioderma", "Bd"], ["leenarts", "Drs Leenarts", "DL"], ["loreal", "L'Oréal Paris", "LO"]],
+  moisturiser: [["cerave", "CeraVe", "Ce"], ["loreal", "L'Oréal Paris", "LO"], ["biodermal", "Biodermal", "Bi"], ["laroche", "La Roche-Posay", "LR"],
+                ["leenarts", "Drs Leenarts", "DL"], ["vanderhoog", "Dr. Van der Hoog", "VH"], ["neutrogena", "Neutrogena", "Ne"],
+                ["weleda", "Weleda", "We"], ["nivea", "Nivea", "Ni"], ["eucerin", "Eucerin", "Eu"]]
+};
+const BRAND_EXTRA = [["store", "A store's own brand", "★"], ["other", "Something else", "+"]];
+
 /* ---------- Questions ---------- */
 const QS = [
   { id: "q1", type: "tone", title: "Which shade is closest to your skin?", hint: "Slide to pick. This helps match sunscreens without a white cast.",
@@ -429,8 +464,8 @@ const QS = [
     hint: "If you use both, pick the one you'd like to answer about.",
     opts: [["sunscreen", "Sunscreen", "", "tube"], ["moisturiser", "Moisturiser", "With or without SPF", "jar"],
            ["neither", "Neither", "We'll skip a few questions", "none", true]] },
-  { id: "q5", type: "multi", layout: "chips", title: "Where did you buy your {p}?", hint: "Pick all that apply.",
-    opts: [["kruidvat", "Kruidvat"], ["etos", "Etos"], ["douglas", "Douglas"], ["hema", "HEMA"], ["action", "Action"], ["else", "Somewhere else"]] },
+  { id: "q5", type: "single", layout: "brands", title: "Which brand is your {p}?", hint: "Pick the one you use now.",
+    opts: [] /* filled from BRANDS below */ },
   { id: "q6", type: "multi", max: 2, layout: "cards", title: "How did you pick your {p}?", hint: "Pick up to 2.",
     opts: [["friend", "A friend or family member", "recommended it", "friend"], ["staff", "Shop staff", "advised me", "staff"],
            ["social", "Social media", "I saw it there", "social"], ["reviews", "Online reviews", "I read them", "reviews"],
@@ -461,6 +496,8 @@ const QS = [
     hint: "Optional. A sentence is enough.", placeholder: "For example: which sunscreen doesn't sting my eyes?" }
 ];
 // option tuple: [id, label, sub, illustration, wide, durationPercent, exclusive]
+{ const q5 = QS.find((q) => q.id === "q5"); const seen = new Set();
+  q5.opts = [...BRANDS.sunscreen, ...BRANDS.moisturiser, ...BRAND_EXTRA].filter((b) => !seen.has(b[0]) && seen.add(b[0])).map((b) => [b[0], b[1] === "Nivea Sun" ? "Nivea" : b[1]]); }
 
 /* ---------- Languages ---------- */
 const UI = {
@@ -478,6 +515,7 @@ const UI = {
     qof: "Question {n} of {m}", aboutA: "About your", change: "Change",
     picked: "{c} of {m} picked", maxw: "Pick up to {m}. Tap one to remove it.",
     yourq: "Your question",
+    storeSub: "Kruidvat, Etos, HEMA, Action…", otherLabel: "Which brand?", otherPh: "Type the brand name",
     toneN: "Tone {n} of 8", toneHint: "Slide to choose", toneAria: "Skin tone", lightest: "Lightest", deepest: "Deepest",
     optA: "Option A", optB: "Option B",
     aText: "11 of 14 women with skin like yours would buy it again", bText: "4.3 stars from 2,300 reviews",
@@ -518,6 +556,7 @@ const UI = {
     qof: "Vraag {n} van {m}", aboutA: "Over je", change: "Wijzig",
     picked: "{c} van {m} gekozen", maxw: "Kies er maximaal {m}. Tik er een aan om hem weg te halen.",
     yourq: "Je vraag",
+    storeSub: "Kruidvat, Etos, HEMA, Action…", otherLabel: "Welk merk?", otherPh: "Typ de merknaam",
     toneN: "Tint {n} van 8", toneHint: "Schuif om te kiezen", toneAria: "Huidtint", lightest: "Lichtst", deepest: "Donkerst",
     optA: "Optie A", optB: "Optie B",
     aText: "11 van de 14 vrouwen met een huid zoals de jouwe zouden het opnieuw kopen", bText: "4,3 sterren uit 2.300 reviews",
@@ -552,7 +591,7 @@ const NLQ = {
     opts: { tight: ["Strak of schilferig"], shiny: ["Overal glanzend"], tzone: ["Glanzende T-zone", "Alleen voorhoofd, neus en kin"], comfy: ["Comfortabel"], unsure: ["Weet ik niet"] } },
   q4: { title: "Welke van deze gebruik je op je gezicht?", hint: "Gebruik je ze allebei? Kies degene waarover je wilt antwoorden.",
     opts: { sunscreen: ["Zonnebrand"], moisturiser: ["Dagcrème", "Met of zonder SPF"], neither: ["Geen van beide", "We slaan een paar vragen over"] } },
-  q5: { title: "Waar heb je je {p} gekocht?", hint: "Kies alles wat van toepassing is.", opts: { else: ["Ergens anders"] } },
+  q5: { title: "Welk merk is je {p}?", hint: "Kies het merk dat je nu gebruikt.", opts: { store: ["Een huismerk"], other: ["Iets anders"] } },
   q6: { title: "Hoe heb je je {p} gekozen?", hint: "Kies er maximaal 2.",
     opts: { friend: ["Een vriendin of familielid", "raadde het aan"], staff: ["Winkelpersoneel", "gaf me advies"], social: ["Social media", "daar zag ik het"],
             reviews: ["Online reviews", "die heb ik gelezen"], pro: ["Een arts of huidtherapeut", "raadde het aan"], offer: ["Het was in de aanbieding"] } },
@@ -672,7 +711,18 @@ function questionHTML(q) {
   const list = visList(), pos = list.indexOf(q) + 1;
   const role = q.type === "multi" ? "checkbox" : "radio";
   let body = "";
-  if (q.type === "tone") {
+  if (q.layout === "brands") {
+    const list = [...(BRANDS[state.ans.q4] || BRANDS.moisturiser), ...BRAND_EXTRA];
+    const v = state.ans[q.id];
+    body = `<div class="brands" role="radiogroup" aria-labelledby="qh">` + list.map((b, n) => {
+      const on = v === b[0], isExtra = b[0] === "store" || b[0] === "other";
+      const name = isExtra ? ol(q, [b[0], b[1]])[0] : b[1];
+      const sub = b[0] === "store" ? t("storeSub") : "";
+      return `<button type="button" class="brand${on ? " on" : ""}${isExtra ? " extra" : ""}" role="radio" aria-checked="${on}" data-opt="${b[0]}"${n < 9 ? ` data-n="${n + 1}"` : ""}>
+        <span class="mono m${n % 3}" aria-hidden="true">${on ? CHECK : esc(b[2])}</span><span class="tx"><span class="t">${esc(name)}</span>${sub ? `<span class="d">${esc(sub)}</span>` : ""}</span></button>`;
+    }).join("") + `</div>` + (v === "other" ? `<label class="hint" for="q5o">${esc(t("otherLabel"))}</label>
+      <input id="q5o" class="otherin" type="text" maxlength="40" autocomplete="off" placeholder="${esc(t("otherPh"))}" value="${esc(state.ans.q5o || "")}">` : "");
+  } else if (q.type === "tone") {
     const v = state.ans[q.id] || "";
     const n = /^t[1-8]$/.test(v) ? Number(v.slice(1)) : 0;
     body = `<div class="tone">
@@ -940,6 +990,14 @@ function choose(q, id, el) {
     if (state.ans[q.id]) advanceTimer = setTimeout(() => go(1), 420);
     return;
   }
+  if (q.layout === "brands") {
+    state.ans[q.id] = id;
+    if (id !== "other") delete state.ans.q5o;
+    render(0); saveDraft();
+    if (id === "other") { const i = $("q5o"); if (i) i.focus(); }
+    else advanceTimer = setTimeout(() => go(1), 420);
+    return;
+  }
   if (q.type === "single") {
     state.ans[q.id] = id;
     stage.querySelectorAll("[data-opt]").forEach((b) => { const on = b.dataset.opt === id; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); });
@@ -993,6 +1051,7 @@ function payload() {
   const out = { v: CONFIG.version, lang: lang(), group: groupCode(), product: state.ans.q4 || "",
     durationSec: state.startedAt ? Math.round((Date.now() - state.startedAt) / 1000) : null };
   QS.forEach((q) => { if (!visible(q)) return; const v = state.ans[q.id]; if (v != null && v !== "" && !(Array.isArray(v) && !v.length)) out[q.id] = v; });
+  if (out.q5 === "other" && state.ans.q5o && state.ans.q5o.trim()) out.q5o = state.ans.q5o.trim();
   return out;
 }
 
@@ -1053,6 +1112,7 @@ stage.addEventListener("submit", (e) => {
   if (e.target.id === "signup") { e.preventDefault(); sendContact(); }
 });
 stage.addEventListener("input", (e) => {
+  if (e.target.id === "q5o") { state.ans.q5o = e.target.value.slice(0, 40); saveDraft(); return; }
   if (e.target.id === "toneR") {
     const n = Number(e.target.value), q = QS[state.i];
     state.ans[q.id] = "t" + n;
@@ -1075,7 +1135,7 @@ $("back").addEventListener("click", () => go(-1));
 $("about").addEventListener("click", () => { state.i = QS.findIndex((q) => q.id === "q4"); render(-1); });
 document.addEventListener("keydown", (e) => {
   if (state.screen !== "q" || e.metaKey || e.ctrlKey || e.altKey) return;
-  if (e.target.tagName === "TEXTAREA") return;
+  if (e.target.tagName === "TEXTAREA" || (e.target.tagName === "INPUT" && e.target.type === "text" && /^[1-9]$/.test(e.key))) return;
   if (/^[1-9]$/.test(e.key)) {
     const b = stage.querySelector(`[data-n="${e.key}"]`);
     if (b) { e.preventDefault(); choose(QS[state.i], b.dataset.opt, b); }
