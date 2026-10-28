@@ -12,6 +12,8 @@ The page is `index.html`. Answers go to `/api/submit` and are kept in an Upstash
 
 ## Use it
 
+- Live results panel: open `https://<your-site>.vercel.app/results.html` and enter your EXPORT_KEY once. It refreshes every 15 seconds.
+
 - Share `https://<your-site>.vercel.app`.
 - Language: people can switch between English and Dutch on the first screen. The page starts in Dutch when the phone is set to Dutch. To force a language in a link, add `?lang=nl` or `?lang=en` (combine with a group code as `?lang=nl&g=friends`). Each answer records which language was used (`lang` column).
 - One link per group: add `?g=` with a short code, for example `?g=hva` or `?g=partner-a`. The code is saved with each answer, so you can compare groups.
@@ -28,3 +30,7 @@ Stored with the answers: the answers, the product she answered about, the group 
 The optional email or phone number on the thank-you screen goes to a separate list (`survey:contacts`) with only the day it arrived, so it can't be matched to anyone's answers. It is personal data, so delete it when the research is done, together with `survey:responses`. A hidden field catches simple spam bots. There's no rate limit, so if the link gets spammed, rotate the link or add Vercel's firewall rules.
 
 When you delete the data at the end, remove the `survey:responses` and `survey:contacts` keys in the Upstash console.
+
+## Clearing the data
+
+At the bottom of `results.html` there's a "Delete all answers" button. It asks you to type DELETE, then removes every answer and every sign-up. Use it before launch to clear test answers, and on your deletion date (31 December 2027).

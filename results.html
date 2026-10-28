@@ -147,6 +147,16 @@ h3.area { font-size: 17px; margin: 26px 0 10px; }
 .themes { display: flex; flex-wrap: wrap; gap: 8px; }
 .theme { font-size: 14px; padding: 6px 12px; border-radius: 99px; background: var(--blue-soft); }
 .theme b { font-variant-numeric: tabular-nums; margin-right: 4px; }
+.danger { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 24px; display: flex; flex-direction: column; gap: 10px; }
+.danger h2 { font-size: 18px; }
+.danger .sub { max-width: 60ch; margin: 0; }
+.confirm { display: flex; flex-direction: column; gap: 8px; max-width: 420px; padding: 16px; border-radius: 16px; background: #fff6f3; border: 1.5px solid #f1cfc4; }
+.confirm p { margin: 0; }
+.confirm input { min-height: 44px; padding: 0 12px; border: 1.5px solid var(--line); border-radius: 12px; font-size: 16px; }
+.row2 { display: flex; gap: 8px; flex-wrap: wrap; }
+.danger-btn { background: #a33a20; border-color: #a33a20; color: #fff; }
+.danger-btn:disabled { opacity: .6; }
+.done-msg { margin: 0; font-weight: 700; color: var(--accent); }
 .tip { position: fixed; z-index: 20; pointer-events: none; background: var(--ink); color: #fff; border-radius: 10px; padding: 8px 10px; font-size: 13px; max-width: 260px; opacity: 0; transition: opacity .12s; }
 .tip b { font-size: 15px; }
 .tip.on { opacity: 1; }
@@ -263,10 +273,40 @@ function shell() {
       <div class="sec-head"><h2>Analysis</h2><span class="sub">What the answers mean for the product, decision by decision.</span></div>
       <div id="insights"></div>
     </section>
+    <section class="danger">
+      <h2>Clear the data</h2>
+      <p class="sub">Use this before launch to remove test answers, or on your deletion date. It permanently deletes every answer and every interview sign-up. It can't be undone, so download the CSV first if you want a copy.</p>
+      <div id="resetBox"><button class="btn" type="button" id="resetStart">Delete all answers…</button></div>
+    </section>
     <p class="foot"><span>Percentages are of people who answered that question. On questions where people could pick several, they add up to more than 100%.</span><span>Signals turn on from ${MIN_N} answers.</span></p>
   </main>`;
   $("#csv").addEventListener("click", (e) => { e.preventDefault(); location.href = `/api/export?key=${encodeURIComponent(key)}`; });
   $("#forget").addEventListener("click", () => { try { localStorage.removeItem(KEYSTORE); } catch (e) {} clearInterval(timer); timer = 0; key = ""; data = null; seen = new Set(); firstLoad = true; gate(); });
+  $("#resetBox").addEventListener("click", async (e) => {
+    const box = $("#resetBox");
+    if (e.target.id === "resetStart") {
+      const n = (data.sorted || []).length, c = data.contacts || 0;
+      box.innerHTML = `<div class="confirm"><p><b>Delete ${n} answer${n === 1 ? "" : "s"} and ${c} sign-up${c === 1 ? "" : "s"}?</b> Type DELETE to confirm.</p>
+        <label for="resetWord" class="sub">Confirmation</label><input id="resetWord" autocomplete="off" placeholder="DELETE">
+        <div class="row2"><button class="btn" type="button" id="resetCancel">Cancel</button><button class="btn danger-btn" type="button" id="resetGo">Delete everything</button></div>
+        <p class="err" id="resetErr" role="alert"></p></div>`;
+      $("#resetWord").focus();
+    } else if (e.target.id === "resetCancel") {
+      box.innerHTML = `<button class="btn" type="button" id="resetStart">Delete all answers…</button>`;
+    } else if (e.target.id === "resetGo") {
+      if ($("#resetWord").value.trim() !== "DELETE") { $("#resetErr").textContent = "Type DELETE in capitals to confirm."; return; }
+      e.target.disabled = true; e.target.textContent = "Deleting…";
+      try {
+        const r = await fetch("/api/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key, confirm: "DELETE" }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || r.status);
+        box.innerHTML = `<p class="done-msg">Deleted ${j.deleted.responses} answers and ${j.deleted.contacts} sign-ups. The panel is now empty and ready for real answers.</p>`;
+        seen = new Set(); firstLoad = true; load();
+      } catch (err) {
+        $("#resetErr").textContent = "That didn't work. Check your connection and try again."; e.target.disabled = false; e.target.textContent = "Delete everything";
+      }
+    }
+  });
   const det = $("#detail");
   try { det.open = localStorage.getItem("skincare-results-open") === "1"; } catch (e) {}
   det.addEventListener("toggle", () => { try { localStorage.setItem("skincare-results-open", det.open ? "1" : "0"); } catch (e) {} });
