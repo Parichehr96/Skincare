@@ -139,6 +139,11 @@ h3.area { font-size: 17px; margin: 26px 0 10px; }
 .ev { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 1px; }
 .next { margin: 4px 0 0; font-size: 14px; padding-top: 8px; border-top: 1px solid var(--line); }
 .segs { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+.tablewrap { overflow-x: auto; border: 1.5px solid var(--line); border-radius: 16px; }
+.btable { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+.btable th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 700; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.btable td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; font-variant-numeric: tabular-nums; }
+.btable tr:last-child td { border-bottom: 0; }
 .themes { display: flex; flex-wrap: wrap; gap: 8px; }
 .theme { font-size: 14px; padding: 6px 12px; border-radius: 99px; background: var(--blue-soft); }
 .theme b { font-variant-numeric: tabular-nums; margin-right: 4px; }
@@ -562,6 +567,19 @@ function segments(rows) {
   return out.sort((a, b) => b.gap - a.gap).slice(0, 6);
 }
 
+function brandCare(rows) {
+  const by = {};
+  rows.forEach((x) => { if (!x.q5 || x.q4 === "neither") return; const k = x.q5 === "other" && x.q5o ? "other:" + x.q5o.trim().toLowerCase() : x.q5; (by[k] = by[k] || []).push(x); });
+  return Object.entries(by).filter(([, list]) => list.length >= 5).sort((a, b) => b[1].length - a[1].length).slice(0, 8).map(([k, list]) => {
+    const { n, c } = counts(list, Q.q8);
+    const top = Q.q8.opts.slice().sort((a, b) => c[b[0]] - c[a[0]]).filter((o) => c[o[0]]).slice(0, 2).map((o) => `${o[1]} ${pct(c[o[0]], n)}%`);
+    const sun = list.filter((x) => x.q4 === "sunscreen").length;
+    return { name: k.startsWith("other:") ? k.slice(6) : lab("q5", k), n: list.length, product: sun >= list.length / 2 ? "mostly sunscreen" : "mostly moisturiser",
+      top: top.join(", ") || "–", ingr: n ? pct(c.ingredients || 0, n) : 0, under20: share(list, "q9", ["u10", "10-20"]).p,
+      buyAgain: share(list, "q11", ["yes", "reviews"]).p };
+  });
+}
+
 const THEMES = [
   ["Sunscreen and SPF", /spf|sunscreen|zonnebrand|zon\b|sun\b|uv/i],
   ["Spots and breakouts", /acne|puist|pimple|spot|breakout|mee-?eter/i],
@@ -607,6 +625,9 @@ function renderInsights() {
     <h3 class="area">Differences between groups</h3>
     ${segs.length ? `<ul class="segs">${segs.map((s) => `<li>${esc(s.text)}</li>`).join("")}</ul><p class="sub">Shown when both groups have 10 or more answers and differ by 15 points or more.</p>`
       : `<p class="sub">No clear differences yet. They show up when two groups each have 10 or more answers and differ by 15 points or more.</p>`}
+    <h3 class="area">Brands and what their users care about</h3>
+    ${(() => { const bc = brandCare(rows); return bc.length ? `<div class="tablewrap"><table class="btable"><thead><tr><th>Brand</th><th>Answers</th><th>What matters most</th><th>Care about ingredients</th><th>Spend under €20</th></tr></thead><tbody>${bc.map((b) => `<tr><td><b>${esc(b.name)}</b><span class="sub"> · ${esc(b.product)}</span></td><td>${b.n}</td><td>${esc(b.top)}</td><td>${b.ingr}%</td><td>${b.under20}%</td></tr>`).join("")}</tbody></table></div><p class="sub">Brands with 5 or more answers. Use this to see what each brand's users expect: what to highlight on its product pages, and which ingredients to check first.</p>`
+      : `<p class="sub">Shows each brand once it has 5 or more answers.</p>`; })()}
     <h3 class="area">What women would ask a skincare chat</h3>
     ${th.list.length ? `<div class="themes">${th.list.map(([name, k]) => `<span class="theme"><b>${k}</b> ${esc(name)}</span>`).join("")}</div><p class="sub">From ${th.n} written answers to Q15, sorted by keyword. Use the biggest themes as the chat's starter chips and in the knowledge base.</p>`
       : `<p class="sub">No written answers to sort yet.</p>`}`;

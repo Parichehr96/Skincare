@@ -466,18 +466,18 @@ const QS = [
            ["neither", "Neither", "We'll skip a few questions", "none", true]] },
   { id: "q5", type: "single", layout: "brands", title: "Which brand is your {p}?", hint: "Pick the one you use now.",
     opts: [] /* filled from BRANDS below */ },
-  { id: "q6", type: "multi", max: 2, layout: "cards", title: "How did you pick your {p}?", hint: "Pick up to 2.",
+  { id: "q6", type: "multi", max: 2, layout: "cards", title: "How did you pick your {pb}?", hint: "Pick up to 2.",
     opts: [["friend", "A friend or family member", "recommended it", "friend"], ["staff", "Shop staff", "advised me", "staff"],
            ["social", "Social media", "I saw it there", "social"], ["reviews", "Online reviews", "I read them", "reviews"],
            ["pro", "A doctor or skin therapist", "advised it", "pro"], ["offer", "It was on offer", "", "offer"]] },
-  { id: "q7", type: "single", layout: "rows", title: "After how long could you tell whether your {p} works for you?",
+  { id: "q7", type: "single", layout: "rows", title: "After how long could you tell whether your {pb} works for you?",
     opts: [["days", "A few days", "", null, false, 6], ["week", "About a week", "", null, false, 16], ["2-3w", "2–3 weeks", "", null, false, 38],
            ["4-6w", "4–6 weeks", "", null, false, 72], ["longer", "Longer than that", "", null, false, 100]] },
   { id: "q8", type: "multi", max: 3, layout: "cards", title: "What matters most when you choose a {p}?", hint: "Pick up to 3.",
     opts: [["price", "Low price", "", "price"], ["nofrag", "Fragrance-free", "", "nofrag"], ["spf", "Has SPF", "", "spf"],
            ["light", "Light texture", "", "light"], ["nocast", "No white cast", "", "nocast"], ["makeup", "Works under makeup", "", "makeup"],
            ["ingredients", "Ingredients", "What's in it, or what isn't", "ingredients", true]] },
-  { id: "q9", type: "single", layout: "chips", title: "How much do you usually spend on your {p}?",
+  { id: "q9", type: "single", layout: "chips", title: "How much do you usually spend on your {pb}?",
     opts: [["u10", "Under €10"], ["10-20", "€10–20"], ["20-35", "€20–35"], ["35+", "More than €35"]] },
   { id: "q10", type: "single", layout: "compare", title: "Which helps you more when choosing?", hint: "Two ways to show reviews for the same {p}.",
     opts: [["a", "A"], ["b", "B"], ["both", "Both together"], ["neither", "Neither"]] },
@@ -515,7 +515,7 @@ const UI = {
     qof: "Question {n} of {m}", aboutA: "About your", change: "Change",
     picked: "{c} of {m} picked", maxw: "Pick up to {m}. Tap one to remove it.",
     yourq: "Your question",
-    storeSub: "Kruidvat, Etos, HEMA, Action…", otherLabel: "Which brand?", otherPh: "Type the brand name",
+    storeSub: "Kruidvat, Etos, HEMA, Action…", otherLabel: "Which brand?", otherPh: "Type the brand name", storeBrand: "store-brand",
     toneN: "Tone {n} of 8", toneHint: "Slide to choose", toneAria: "Skin tone", lightest: "Lightest", deepest: "Deepest",
     optA: "Option A", optB: "Option B",
     aText: "11 of 14 women with skin like yours would buy it again", bText: "4.3 stars from 2,300 reviews",
@@ -556,7 +556,7 @@ const UI = {
     qof: "Vraag {n} van {m}", aboutA: "Over je", change: "Wijzig",
     picked: "{c} van {m} gekozen", maxw: "Kies er maximaal {m}. Tik er een aan om hem weg te halen.",
     yourq: "Je vraag",
-    storeSub: "Kruidvat, Etos, HEMA, Action…", otherLabel: "Welk merk?", otherPh: "Typ de merknaam",
+    storeSub: "Kruidvat, Etos, HEMA, Action…", otherLabel: "Welk merk?", otherPh: "Typ de merknaam", storeBrand: "huismerk",
     toneN: "Tint {n} van 8", toneHint: "Schuif om te kiezen", toneAria: "Huidtint", lightest: "Lichtst", deepest: "Donkerst",
     optA: "Optie A", optB: "Optie B",
     aText: "11 van de 14 vrouwen met een huid zoals de jouwe zouden het opnieuw kopen", bText: "4,3 sterren uit 2.300 reviews",
@@ -592,15 +592,15 @@ const NLQ = {
   q4: { title: "Welke van deze gebruik je op je gezicht?", hint: "Gebruik je ze allebei? Kies degene waarover je wilt antwoorden.",
     opts: { sunscreen: ["Zonnebrand"], moisturiser: ["Dagcrème", "Met of zonder SPF"], neither: ["Geen van beide", "We slaan een paar vragen over"] } },
   q5: { title: "Welk merk is je {p}?", hint: "Kies het merk dat je nu gebruikt.", opts: { store: ["Een huismerk"], other: ["Iets anders"] } },
-  q6: { title: "Hoe heb je je {p} gekozen?", hint: "Kies er maximaal 2.",
+  q6: { title: "Hoe heb je je {pb} gekozen?", hint: "Kies er maximaal 2.",
     opts: { friend: ["Een vriendin of familielid", "raadde het aan"], staff: ["Winkelpersoneel", "gaf me advies"], social: ["Social media", "daar zag ik het"],
             reviews: ["Online reviews", "die heb ik gelezen"], pro: ["Een arts of huidtherapeut", "raadde het aan"], offer: ["Het was in de aanbieding"] } },
-  q7: { title: "Na hoe lang kon je zien of je {p} goed werkt voor jou?",
+  q7: { title: "Na hoe lang kon je zien of je {pb} goed werkt voor jou?",
     opts: { days: ["Een paar dagen"], week: ["Ongeveer een week"], "2-3w": ["2–3 weken"], "4-6w": ["4–6 weken"], longer: ["Langer dan dat"] } },
   q8: { title: "Wat vind je het belangrijkst bij het kiezen van een {p}?", hint: "Kies er maximaal 3.",
     opts: { price: ["Lage prijs"], nofrag: ["Parfumvrij"], spf: ["Met SPF"], light: ["Lichte textuur"], nocast: ["Geen witte waas"], makeup: ["Werkt onder make-up"],
             ingredients: ["Ingrediënten", "Wat erin zit, of juist niet"] } },
-  q9: { title: "Hoeveel geef je meestal uit aan je {p}?", opts: { u10: ["Minder dan €10"], "35+": ["Meer dan €35"] } },
+  q9: { title: "Hoeveel geef je meestal uit aan je {pb}?", opts: { u10: ["Minder dan €10"], "35+": ["Meer dan €35"] } },
   q10: { title: "Wat helpt je meer bij het kiezen?", hint: "Twee manieren om reviews voor dezelfde {p} te tonen.", opts: { both: ["Allebei samen"], neither: ["Geen van beide"] } },
   q11: { title: "Zou je een AI-chat vertrouwen om een {p} voor je te kiezen?",
     opts: { yes: ["Ja"], reviews: ["Alleen als die reviews van echte vrouwen laat zien"], no: ["Nee"], unsure: ["Weet ik niet zeker"] } },
@@ -637,7 +637,16 @@ function loadDraft() {
   return null;
 }
 const product = () => { const p = UI[lang()].product; return state.ans.q4 === "sunscreen" ? p.sunscreen : state.ans.q4 === "moisturiser" ? p.moisturiser : p.either; };
-const fill = (t) => t.replace("{p}", product());
+const brandName = () => {
+  const v = state.ans.q5;
+  if (!v || state.ans.q4 === "neither") return "";
+  if (v === "store") return t("storeBrand");
+  if (v === "other") return (state.ans.q5o || "").trim().slice(0, 30);
+  const b = (BRANDS[state.ans.q4] || []).find((x) => x[0] === v);
+  return b ? b[1] : "";
+};
+const productPhrase = () => { const b = brandName(); return b ? `${b} ${product()}` : product(); };
+const fill = (t) => t.replace("{pb}", productPhrase()).replace("{p}", product());
 const visible = (q) => !(state.ans.q4 === "neither" && (q.id === "q5" || q.id === "q6" || q.id === "q7"));
 const visList = () => QS.filter(visible);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -802,7 +811,7 @@ function updateChrome() {
   const about = $("about");
   const chosen = state.ans.q4 === "sunscreen" || state.ans.q4 === "moisturiser";
   about.hidden = !(chosen && QS.indexOf(q) > QS.findIndex((x) => x.id === "q4"));
-  if (!about.hidden) about.innerHTML = `${svg(state.ans.q4 === "sunscreen" ? "tube" : "jar")}<span>${esc(t("aboutA"))} <b>${esc(product())}</b></span><span class="chg">${esc(t("change"))}</span>`;
+  if (!about.hidden) about.innerHTML = `${svg(state.ans.q4 === "sunscreen" ? "tube" : "jar")}<span>${esc(t("aboutA"))} <b>${esc(productPhrase())}</b></span><span class="chg">${esc(t("change"))}</span>`;
   $("back").innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>${esc(t("back"))}`;
   const last = pos === list.length;
   const nextBtn = $("next");
