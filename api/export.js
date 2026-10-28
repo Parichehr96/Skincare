@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
     if (req.query.format === "count") return res.status(200).json({ responses: rows.length });
     if (req.query.format === "json" && !contacts) {
       const list = [];
-      for (const raw of rows) { try { list.push(JSON.parse(raw)); } catch (e) {} }
+      for (const raw of rows) { try { list.push({ ...JSON.parse(raw), _raw: raw }); } catch (e) {} }
       let contactCount = 0;
       try { contactCount = (await redis(["LLEN", "survey:contacts"])) || 0; } catch (e) {}
       res.setHeader("Cache-Control", "no-store");

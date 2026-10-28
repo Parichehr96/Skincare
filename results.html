@@ -57,7 +57,7 @@ section { margin-top: 28px; }
 .feed { display: flex; flex-direction: column; gap: 8px; }
 .row { border: 1.5px solid var(--line); border-radius: 16px; background: #fff; transition: background-color 1.2s; }
 .row.fresh { background: var(--new); }
-.row summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 16px; }
+.row summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 92px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 8px 10px 8px 16px; min-height: 52px; }
 .row summary::-webkit-details-marker { display: none; }
 .when { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .who { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
@@ -65,6 +65,14 @@ section { margin-top: 28px; }
 .tag.b { background: var(--blue-soft); }
 .tag.g { background: var(--green-soft); }
 .dur { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rowact { display: inline-flex; align-items: center; gap: 6px; justify-self: end; }
+.trash { width: 36px; height: 36px; border-radius: 10px; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; color: var(--muted); }
+.trash:hover, .trash:focus-visible { background: #fff1ec; color: #a33a20; }
+.trash svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.mini { min-height: 32px; padding: 0 12px; border-radius: 99px; border: 1.5px solid var(--line); background: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+.mini.danger-btn { border-color: #a33a20; }
+.ask { font-size: 13px; font-weight: 700; color: #a33a20; }
+.feedmore { margin-top: 10px; }
 .answers { margin: 0; padding: 4px 16px 16px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 24px; }
 .answers div { display: flex; flex-direction: column; font-size: 14px; }
 .answers dt { color: var(--muted); font-size: 12px; }
@@ -163,7 +171,7 @@ h3.area { font-size: 17px; margin: 26px 0 10px; }
 .foot { margin-top: 32px; font-size: 13px; color: var(--muted); display: flex; gap: 16px; flex-wrap: wrap; }
 @media (max-width: 640px) {
   .kpi:last-child:nth-child(odd) { grid-column: 1 / -1; }
-  .row summary { grid-template-columns: 70px minmax(0, 1fr); }
+  .row summary { grid-template-columns: 70px minmax(0, 1fr) auto; }
   .row summary .dur { display: none; }
   .answers { grid-template-columns: minmax(0, 1fr); }
   .bar { grid-template-columns: minmax(0, 1fr) 70px; }
@@ -198,6 +206,7 @@ const SIGNALS = {
 };
 const KEYSTORE = "skincare-results-key";
 const MIN_N = 30;
+let showAll = false, confirmRid = "", openRows = new Set();
 let key = "", data = null, seen = new Set(), firstLoad = true, lastOk = 0, timer = 0, fails = 0;
 const F = { range: "all", q2: "", q3: "", q4: "", lang: "", group: "" };
 const $ = (s, r = document) => r.querySelector(s);
@@ -257,8 +266,9 @@ function shell() {
   <main class="wrap" id="main">
     <section><div class="kpis" id="kpis"></div></section>
     <section>
-      <div class="sec-head"><h2>Latest answers</h2><span class="sub">Updates every 15 seconds. New answers flash yellow.</span></div>
+      <div class="sec-head"><h2>Latest answers</h2><span class="sub">Updates every 15 seconds. New answers flash yellow. Tap a row to see all its answers.</span></div>
       <div class="feed" id="feed"></div>
+      <div class="feedmore" id="feedmore"></div>
     </section>
     <section>
       <details class="panel" id="detail">
@@ -282,6 +292,23 @@ function shell() {
   </main>`;
   $("#csv").addEventListener("click", (e) => { e.preventDefault(); location.href = `/api/export?key=${encodeURIComponent(key)}`; });
   $("#forget").addEventListener("click", () => { try { localStorage.removeItem(KEYSTORE); } catch (e) {} clearInterval(timer); timer = 0; key = ""; data = null; seen = new Set(); firstLoad = true; gate(); });
+  $("#feedmore").addEventListener("click", (e) => { if (e.target.id === "toggleAll") { showAll = !showAll; renderFeed(data.sorted || []); } });
+  $("#feed").addEventListener("toggle", (e) => { const d = e.target; if (!d.matches || !d.matches("details.row")) return; const r = (data.sorted || [])[Number(d.dataset.idx)]; if (!r) return; if (d.open) openRows.add(rid(r)); else openRows.delete(rid(r)); }, true);
+  $("#feed").addEventListener("click", async (e) => {
+    const ask = e.target.closest("[data-ask]"), del = e.target.closest("[data-del]"), cancel = e.target.closest("[data-cancel]");
+    if (!ask && !del && !cancel) return;
+    e.preventDefault(); e.stopPropagation();
+    if (ask) { const a = (data.sorted || [])[Number(ask.dataset.ask)]; confirmRid = a ? rid(a) : ""; renderFeed(data.sorted || []); return; }
+    if (cancel) { confirmRid = ""; renderFeed(data.sorted || []); return; }
+    const r = (data.sorted || [])[Number(del.dataset.del)];
+    if (!r || !r._raw) return;
+    del.disabled = true; del.textContent = "Deleting…";
+    try {
+      const res = await fetch("/api/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key, raw: r._raw }) });
+      if (!res.ok) throw new Error(res.status);
+      confirmRid = ""; load();
+    } catch (err) { del.disabled = false; del.textContent = "Try again"; }
+  });
   $("#resetBox").addEventListener("click", async (e) => {
     const box = $("#resetBox");
     if (e.target.id === "resetStart") {
@@ -346,7 +373,10 @@ function renderKpis(rows) {
 function renderFeed(rows) {
   const feed = $("#feed");
   if (!rows.length) { feed.innerHTML = `<div class="empty">No answers yet. As soon as someone finishes the survey, it appears here.</div>`; return; }
-  feed.innerHTML = rows.slice(0, 8).map((r) => {
+  const list = showAll ? rows : rows.slice(0, 8);
+  const more = $("#feedmore");
+  if (more) more.innerHTML = rows.length > 8 ? `<button class="btn" type="button" id="toggleAll">${showAll ? "Show the latest 8" : `Show all ${rows.length} answers`}</button>` : "";
+  feed.innerHTML = list.map((r, i) => {
     const fresh = !firstLoad && !seen.has(rid(r));
     const tags = [
       r.lang ? `<span class="tag b">${esc(r.lang.toUpperCase())}</span>` : "",
@@ -358,7 +388,10 @@ function renderFeed(rows) {
     ].join("");
     const ans = QS.filter((q) => r[q.id] != null && r[q.id] !== "").map((q) =>
       `<div><dt>${esc(q.id.toUpperCase())} · ${esc(q.title)}</dt><dd>${esc(q.type === "text" ? r[q.id] : labs(q.id, r[q.id]) + (q.id === "q5" && r.q5o ? `: ${r.q5o}` : ""))}</dd></div>`).join("");
-    return `<details class="row${fresh ? " fresh" : ""}"><summary><span class="when">${esc(ago(r.receivedAt))}</span><span class="who">${tags}</span><span class="dur">${mmss(r.durationSec)}</span></summary><dl class="answers">${ans}</dl></details>`;
+    const idx = rows.indexOf(r);
+    return `<details class="row${fresh ? " fresh" : ""}" data-idx="${idx}"${openRows.has(rid(r)) ? " open" : ""}><summary><span class="when">${esc(ago(r.receivedAt))}</span><span class="who">${tags}</span><span class="dur">${mmss(r.durationSec)}</span>
+      <span class="rowact">${confirmRid === rid(r) ? `<span class="ask">Delete?</span><button type="button" class="mini danger-btn" data-del="${idx}">Delete</button><button type="button" class="mini" data-cancel="1">Keep</button>`
+        : `<button type="button" class="trash" data-ask="${idx}" aria-label="Delete this answer" title="Delete this answer"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l.7 10h6.6L14 6M8.5 9v4.5M11.5 9v4.5"/></svg></button>`}</span></summary><dl class="answers">${ans}</dl></details>`;
   }).join("");
   setTimeout(() => feed.querySelectorAll(".fresh").forEach((el) => el.classList.remove("fresh")), 2500);
 }
