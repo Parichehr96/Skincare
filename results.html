@@ -77,6 +77,12 @@ section { margin-top: 28px; }
 .answers div { display: flex; flex-direction: column; font-size: 14px; }
 .answers dt { color: var(--muted); font-size: 12px; }
 .answers dd { margin: 0; }
+.signups { display: flex; flex-direction: column; gap: 8px; }
+.su { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 16px; background: #fff; }
+.su .c { font-weight: 700; font-size: 16px; user-select: all; overflow-wrap: anywhere; min-width: 0; flex: 1 1 220px; }
+.su .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.su .acts { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+.privacy { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
 .empty { padding: 28px; text-align: center; color: var(--muted); background: var(--panel); border-radius: 18px; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px; background: var(--panel); border-radius: 18px; }
@@ -206,7 +212,7 @@ const SIGNALS = {
 };
 const KEYSTORE = "skincare-results-key";
 const MIN_N = 30;
-let showAll = false, confirmRid = "", openRows = new Set();
+let showAll = false, confirmRid = "", openRows = new Set(), confirmSu = "";
 let key = "", data = null, seen = new Set(), firstLoad = true, lastOk = 0, timer = 0, fails = 0;
 const F = { range: "all", q2: "", q3: "", q4: "", lang: "", group: "" };
 const $ = (s, r = document) => r.querySelector(s);
@@ -244,6 +250,9 @@ async function load(fromGate) {
     if (!r.ok) throw new Error(r.status);
     const json = await r.json();
     try { localStorage.setItem(KEYSTORE, key); } catch (e) {}
+    let cl = null;
+    try { const rc = await fetch(`/api/export?type=contacts&format=json&key=${encodeURIComponent(key)}`, { cache: "no-store" }); if (rc.ok) { const jc = await rc.json(); if (Array.isArray(jc.contacts)) cl = jc.contacts; } } catch (e) {}
+    json.contactList = cl;
     data = json; lastOk = Date.now(); fails = 0;
     if (!$("#main")) shell();
     renderAll();
@@ -271,6 +280,11 @@ function shell() {
       <div class="feedmore" id="feedmore"></div>
     </section>
     <section>
+      <div class="sec-head"><h2>Signed up</h2><span class="sub">People who left a contact to chat or to hear the results.</span><a class="btn" id="csvc" href="#">Download sign-ups</a></div>
+      <div class="signups" id="signups"></div>
+      <p class="privacy">Kept apart from the answers on purpose, with only the date, so you can't tell which answers are whose. Delete a sign-up once you've been in touch and don't need it any more.</p>
+    </section>
+    <section>
       <details class="panel" id="detail">
         <summary><span><h2>Detailed results</h2><span class="sub">Every question as a chart, with filters</span></span><span class="chev" aria-hidden="true"></span></summary>
         <div class="panel-body">
@@ -292,6 +306,28 @@ function shell() {
   </main>`;
   $("#csv").addEventListener("click", (e) => { e.preventDefault(); location.href = `/api/export?key=${encodeURIComponent(key)}`; });
   $("#forget").addEventListener("click", () => { try { localStorage.removeItem(KEYSTORE); } catch (e) {} clearInterval(timer); timer = 0; key = ""; data = null; seen = new Set(); firstLoad = true; gate(); });
+  $("#csvc").addEventListener("click", (e) => { e.preventDefault(); location.href = `/api/export?type=contacts&key=${encodeURIComponent(key)}`; });
+  $("#signups").addEventListener("click", async (e) => {
+    const cp = e.target.closest("[data-copy]"), ask = e.target.closest("[data-sask]"), del = e.target.closest("[data-sdel]"), cancel = e.target.closest("[data-scancel]");
+    const list = data.contactList || [];
+    if (cp) {
+      const c = list[Number(cp.dataset.copy)]; if (!c) return;
+      try { await navigator.clipboard.writeText(c.contact); cp.textContent = "Copied"; }
+      catch (err) { const t = cp.closest(".su").querySelector(".c"); const rg = document.createRange(); rg.selectNodeContents(t); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(rg); cp.textContent = "Selected"; }
+      setTimeout(() => { cp.textContent = "Copy"; }, 1600); return;
+    }
+    if (ask) { const c = list[Number(ask.dataset.sask)]; confirmSu = c ? c._raw : ""; renderSignups(); return; }
+    if (cancel) { confirmSu = ""; renderSignups(); return; }
+    if (del) {
+      const c = list[Number(del.dataset.sdel)]; if (!c || !c._raw) return;
+      del.disabled = true; del.textContent = "Deleting…";
+      try {
+        const res = await fetch("/api/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key, raw: c._raw, list: "contacts" }) });
+        if (!res.ok) throw new Error(res.status);
+        confirmSu = ""; load();
+      } catch (err) { del.disabled = false; del.textContent = "Try again"; }
+    }
+  });
   $("#feedmore").addEventListener("click", (e) => { if (e.target.id === "toggleAll") { showAll = !showAll; renderFeed(data.sorted || []); } });
   $("#feed").addEventListener("toggle", (e) => { const d = e.target; if (!d.matches || !d.matches("details.row")) return; const r = (data.sorted || [])[Number(d.dataset.idx)]; if (!r) return; if (d.open) openRows.add(rid(r)); else openRows.delete(rid(r)); }, true);
   $("#feed").addEventListener("click", async (e) => {
@@ -352,8 +388,24 @@ setInterval(tickLive, 5000);
 function renderAll() {
   const rows = (data.responses || []).slice().sort((a, b) => (b.receivedAt || "").localeCompare(a.receivedAt || ""));
   data.sorted = rows;
-  renderKpis(rows); renderFeed(rows); renderFilters(rows); renderAnalytics(); renderInsights();
+  renderKpis(rows); renderFeed(rows); renderSignups(); renderFilters(rows); renderAnalytics(); renderInsights();
   rows.forEach((r) => seen.add(rid(r))); firstLoad = false; tickLive();
+}
+
+function renderSignups() {
+  const box = $("#signups"); if (!box) return;
+  const list = data.contactList;
+  if (list == null) { box.innerHTML = `<div class="empty">Couldn't load the sign-ups. The rest of the results are up to date; they'll retry in 15 seconds.</div>`; return; }
+  if (!list.length) { box.innerHTML = `<div class="empty">No sign-ups yet. When someone leaves an email or phone number at the end of the survey, it shows here.</div>`; return; }
+  const want = { talk: "Wants a chat", results: "Wants the results" };
+  const day = (d) => { try { return new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); } catch (e) { return d || ""; } };
+  box.innerHTML = list.map((c, i) => `<div class="su">
+    <span class="c">${esc(c.contact || "")}</span>
+    <span class="tags">${(c.wants || []).map((w) => `<span class="tag ${w === "talk" ? "g" : "b"}">${esc(want[w] || w)}</span>`).join("") || `<span class="tag">No choice given</span>`}<span class="tag">${esc(day(c.receivedOn))}</span></span>
+    <span class="acts">${confirmSu && confirmSu === c._raw
+      ? `<span class="ask">Delete?</span><button type="button" class="mini danger-btn" data-sdel="${i}">Delete</button><button type="button" class="mini" data-scancel="1">Keep</button>`
+      : `<button type="button" class="mini" data-copy="${i}">Copy</button><button type="button" class="trash" data-sask="${i}" aria-label="Delete this sign-up" title="Delete this sign-up"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l.7 10h6.6L14 6M8.5 9v4.5M11.5 9v4.5"/></svg></button>`}</span>
+  </div>`).join("");
 }
 
 function renderKpis(rows) {
