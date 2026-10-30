@@ -526,6 +526,7 @@ const UI = {
     h1: "How do you choose your sunscreen and moisturiser?",
     intro: "A short survey for women in the Netherlands about finding a face sunscreen or moisturiser that suits your skin.",
     f1: "3 minutes", f2: "15 questions", f3: "Anonymous",
+    ps: "P.S. This survey contains Karma to get free survey responses at SurveySwap.io",
     p1: "No name, no email, no medical questions.",
     p2: "Used only for this research. Stored in the EU, deleted by {date}.",
     p3: "Skip any question or stop whenever you want.",
@@ -569,6 +570,7 @@ const UI = {
     h1: "Hoe kies jij je zonnebrand en dagcrème?",
     intro: "Een korte vragenlijst voor vrouwen in Nederland over het vinden van een zonnebrand of dagcrème voor je gezicht die bij je huid past.",
     f1: "3 minuten", f2: "15 vragen", f3: "Anoniem",
+    ps: "P.S. Deze vragenlijst bevat Karma voor gratis antwoorden op SurveySwap.io",
     p1: "Geen naam, geen e-mail, geen medische vragen.",
     p2: "Alleen voor dit onderzoek. Opgeslagen in de EU, verwijderd op {date}.",
     p3: "Sla elke vraag over of stop wanneer je wilt.",
@@ -695,6 +697,7 @@ function welcomeHTML() {
     </div>
     <h1>${esc(t("h1"))}</h1>
     <p class="intro">${esc(t("intro"))}</p>
+    ${CONFIG.swapCode ? `<p class="small">${esc(t("ps"))}</p>` : ""}
     <div class="facts"><span class="fact">${esc(t("f1"))}</span><span class="fact">${esc(t("f2"))}</span><span class="fact">${esc(t("f3"))}</span></div>
     <ul class="promise">
       <li>${tick}<span>${esc(t("p1"))}</span></li>
