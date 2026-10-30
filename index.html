@@ -319,6 +319,11 @@ h1 { font-size: clamp(27px, 7.6vw, 40px); line-height: 1.06; }
 .playhint { font-size: 15px; color: var(--muted); font-weight: 700; min-height: 22px; font-variant-numeric: tabular-nums; }
 .linkbtn { border: 0; background: transparent; color: var(--muted); font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 12px; min-height: 44px; }
 .linkbtn:hover { color: var(--accent); }
+.swap { width: 100%; text-align: left; background: var(--blue-soft); border-radius: var(--r); padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.swap h3 { margin: 0; font-family: var(--f-display); font-size: 20px; font-weight: 650; }
+.swap p { margin: 0; }
+.swap .coderow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.swap code { font: 700 22px/1.2 var(--f-body); letter-spacing: .06em; background: var(--surface); border-radius: 12px; padding: 10px 14px; user-select: all; font-variant-numeric: tabular-nums; }
 .statusbox { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .signup { width: 100%; text-align: left; background: var(--accent-soft); border-radius: var(--r); box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
 .signup h3 { margin: 0; font-family: var(--f-display); font-size: 20px; font-weight: 650; }
@@ -388,6 +393,7 @@ h1 { font-size: clamp(27px, 7.6vw, 40px); line-height: 1.06; }
 const CONFIG = {
   deleteBy: { en: "31 December 2027", nl: "31 december 2027" },  // shown in the privacy text
   contactEmail: "parichehr.t96@gmail.com",  // shown on the first screen
+  swapCode: "V39D-1TCZ-P0JN",     // SurveySwap completion code, shown on the thank-you screen
   askContact: true,              // show the optional "email or phone" box on the thank-you screen
   version: 1
 };
@@ -540,6 +546,8 @@ const UI = {
     flowAria: "A skincare website or app asks you to review one product you use, in 3 taps, before you can see all reviews.",
     playHint: "Tap the picture. Go on, squeeze the tube.", drops: "{n} drops of sunshine.",
     playAria: "Tap the picture to squeeze out some sunshine",
+    swapH: "From SurveySwap?", swapP: "Here's your completion code. Copy it and paste it on SurveySwap to get your Karma.",
+    copyCode: "Copy code", copied: "Copied", selected: "Selected, now copy it", swapLink: "Came from SurveySwap? Show my code",
     thanks: "Thank you, that's it.", helps: "Your answers help a lot.", restart: "Start over",
     saving: "Sending your answers…", saved: "Your answers are saved.",
     preview: "This is a preview, so your answers weren't saved.",
@@ -581,6 +589,8 @@ const UI = {
     flowAria: "Een skincare-website of -app vraagt je eerst één product dat je gebruikt te beoordelen, in 3 tikken, voordat je alle reviews ziet.",
     playHint: "Tik op de afbeelding. Knijp maar in de tube.", drops: "{n} druppels zonneschijn.",
     playAria: "Tik op de afbeelding om wat zonneschijn uit de tube te knijpen",
+    swapH: "Via SurveySwap?", swapP: "Dit is je code. Kopieer hem en plak hem op SurveySwap om je Karma te krijgen.",
+    copyCode: "Code kopiëren", copied: "Gekopieerd", selected: "Geselecteerd, kopieer hem nu", swapLink: "Via SurveySwap gekomen? Toon mijn code",
     thanks: "Bedankt, dat was het.", helps: "Je antwoorden helpen enorm.", restart: "Opnieuw beginnen",
     saving: "Je antwoorden worden verstuurd…", saved: "Je antwoorden zijn opgeslagen.",
     preview: "Dit is een preview, dus je antwoorden zijn niet opgeslagen.",
@@ -844,6 +854,25 @@ function updateChrome() {
   }
 }
 
+const FROM_SWAP = (() => {
+  let yes = false;
+  try { const q = new URLSearchParams(location.search); yes = /surveyswap/i.test([q.get("src"), q.get("ref"), q.get("utm_source")].join(" ")) || /surveyswap/i.test(document.referrer || ""); } catch (e) {}
+  try { if (yes) sessionStorage.setItem("fromSwap", "1"); else yes = sessionStorage.getItem("fromSwap") === "1"; } catch (e) {}
+  return yes;
+})();
+let swapOpen = FROM_SWAP;
+function swapHTML() {
+  if (!CONFIG.swapCode) return "";
+  if (!swapOpen) return `<button class="linkbtn" type="button" data-act="showswap">${esc(t("swapLink"))}</button>`;
+  return `<div class="swap"><h3>${esc(t("swapH"))}</h3><p>${esc(t("swapP"))}</p>
+    <div class="coderow"><code id="swapcode">${esc(CONFIG.swapCode)}</code><button class="btn" type="button" data-act="copyswap" id="copyswap">${esc(t("copyCode"))}</button></div></div>`;
+}
+async function copySwap(btn) {
+  try { await navigator.clipboard.writeText(CONFIG.swapCode); btn.textContent = t("copied"); }
+  catch (e) { const el = $("swapcode"); const r = document.createRange(); r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); btn.textContent = t("selected"); }
+  setTimeout(() => { btn.textContent = t("copyCode"); }, 2200);
+}
+
 function doneHTML() {
   const signup = CONFIG.askContact ? `<div id="signupBox">${signupHTML()}</div>` : "";
   return `<section class="screen done">
@@ -855,6 +884,7 @@ function doneHTML() {
     <h1>${esc(t("thanks"))}</h1>
     <p>${esc(t("helps"))}</p>
     <div id="statusBox" class="statusbox">${statusHTML()}</div>
+    <div id="swapBox" style="width:100%;display:flex;justify-content:center">${swapHTML()}</div>
     ${signup}
     <button class="linkbtn" type="button" data-act="restart">${esc(t("restart"))}</button>
   </section>`;
@@ -1116,6 +1146,8 @@ stage.addEventListener("click", (e) => {
       state.screen = "q"; state.i = 0; if (!state.startedAt) state.startedAt = Date.now(); render(1);
     } else if (act.dataset.act === "retry") send();
     else if (act.dataset.act === "restart") resetSurvey();
+    else if (act.dataset.act === "showswap") { swapOpen = true; $("swapBox").innerHTML = swapHTML(); const b = $("copyswap"); if (b) b.focus(); }
+    else if (act.dataset.act === "copyswap") copySwap(act);
     return;
   }
   const lg = e.target.closest("[data-lang]");
