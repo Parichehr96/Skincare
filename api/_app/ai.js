@@ -74,7 +74,7 @@ function fallback(text, profile, reviews) {
   if (!list.length) return { reply: "Nothing matches all of that yet. Want me to drop one of the filters?", products: [], chips: ["Any shop", "Any price"], topic: q.cat === "sun" ? "find_sunscreen" : "find_moisturiser", medical: false };
   const top = list[0];
   const who = top.peer.n >= engine.PEER_SOME ? `${top.peer.yes} of ${top.peer.n} women with skin like yours would buy it again` : `${top.all.yes} of ${top.all.n} reviewers would buy it again`;
-  return { reply: `Top pick for you: ${top.name}. ${who}.`, products: list.map((x) => x.id), chips: ["Cheaper?", "Fragrance-free", "See all matches"], topic: q.cat === "sun" ? "find_sunscreen" : "find_moisturiser", medical: false };
+  return { reply: `Top pick for you: ${top.name}. ${who}.`, products: list.map((x) => x.id), chips: ["Cheaper?", "Fragrance-free", "See all"], topic: q.cat === "sun" ? "find_sunscreen" : "find_moisturiser", medical: false };
 }
 
 async function chat({ messages, profile, reviews, samples }) {

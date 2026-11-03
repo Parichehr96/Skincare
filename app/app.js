@@ -381,7 +381,7 @@ async function userSays(text){
   const out=[{who:'bot',type:'text',text:j.reply}];
   if(j.medical) out.push({who:'bot',type:'safety'});
   if(j.products&&j.products.length){out.push({who:'bot',type:'products',items:j.products});S.lastCat=j.products[0].cat;}
-  const chips=(j.chips||[]).slice(0,3); if(j.products&&j.products.length) chips.push('See all matches');
+  const chips=(j.chips||[]).filter(c=>!/^see all/i.test(c)).slice(0,3); if(j.products&&j.products.length) chips.push('See all matches');
   if(chips.length) out.push({who:'bot',type:'chips',chips});
   for(const m of out){appendMsgs([m]);await new Promise(r=>setTimeout(r,RM?0:220));}
  }catch(e){const t=$('#typing');t&&t.remove();appendMsgs([{who:'bot',type:'error',local:true,text:e.code==='slow_down'?'That\'s a lot of questions in a short time. Wait a few minutes and ask again.':e.code==='daily_limit'?'The assistant has reached today\'s limit. Try again tomorrow, or browse Matches.':'I couldn\'t answer that just now. Check your connection and try again.'}]);}
