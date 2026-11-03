@@ -1,0 +1,8 @@
+{
+  "name": "skincare",
+  "private": true,
+  "description": "Skincare survey and the Skin Peers app",
+  "dependencies": {
+    "nodemailer": "6.9.14"
+  }
+}

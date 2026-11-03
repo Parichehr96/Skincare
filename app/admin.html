@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Skin Peers Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Figtree:wght@400;600;700&display=swap">
+<style>
+:root{--bg:#F4F8F5;--paper:#fff;--ink:#15241C;--muted:#53645B;--line:#E0E8E2;--forest:#1F4D3A;--mint:#CDEBD8;--mint-soft:#E9F6EE;--sky:#DCEBF7;--butter:#FBEFD3;--butter-ink:#6A4A10;--rose-ink:#8E2C1C;
+--fd:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;--fb:"Figtree","Avenir Next",system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--fb)}
+.wrap{max-width:1100px;margin:0 auto;padding:24px max(16px,env(safe-area-inset-left,0px)) 48px max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+h1,h2{font-family:var(--fd);font-weight:600;margin:0;letter-spacing:-.01em}
+h1{font-size:28px}h2{font-size:19px}
+.sub{color:var(--muted);font-size:14px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.btn{min-height:40px;padding:0 16px;border-radius:99px;border:1.5px solid var(--line);background:var(--paper);font:inherit;font-weight:700;cursor:pointer;color:var(--ink)}
+.btn.primary{background:var(--forest);border-color:var(--forest);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{background:var(--paper);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:4px}
+.kpi .k{font-size:13px;color:var(--muted);font-weight:700}
+.kpi .v{font-family:var(--fd);font-size:32px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .n{font-size:13px;color:var(--muted)}
+.card{background:var(--paper);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar{display:grid;grid-template-columns:minmax(110px,38%) 1fr 44px;gap:10px;align-items:center;font-size:14px}
+.bar span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track{height:12px;background:var(--mint-soft);border-radius:99px;overflow:hidden}
+.track i{display:block;height:100%;background:var(--forest);border-radius:99px}
+.bar b{text-align:right;font-variant-numeric:tabular-nums}
+.funnel .track i{background:#2B6650}
+.empty{color:var(--muted);font-size:14px}
+.gate{max-width:380px;margin:12vh auto;background:var(--paper);border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:12px}
+.gate input{min-height:48px;border-radius:14px;border:1.5px solid var(--line);padding:0 14px;font:inherit}
+.err{color:var(--rose-ink);font-weight:700;font-size:14px;margin:0}.err:empty{display:none}
+.note{background:var(--butter);color:var(--butter-ink);border-radius:16px;padding:12px 14px;font-size:14px}
+.status{display:flex;flex-wrap:wrap;gap:8px}
+.pill{border-radius:99px;padding:4px 12px;font-size:13px;font-weight:700;background:var(--mint-soft);color:var(--forest)}
+.pill.off{background:var(--butter);color:var(--butter-ink)}
+.switch{display:flex;gap:10px;align-items:center;font-size:14px}
+svg text{font-family:var(--fb)}
+:focus-visible{outline:3px solid #1F4A6B;outline-offset:2px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const KS='sp-admin-key'; let key=''; try{key=localStorage.getItem(KS)||'';}catch(e){}
+function gate(msg){$('#app').innerHTML=`<form class="gate" id="g"><h1>Analytics</h1><p class="sub">Enter your results key. It's saved on this device only.</p><label for="k">Results key</label><input id="k" type="password" autocomplete="current-password"><p class="err">${esc(msg||'')}</p><button class="btn primary">Open</button></form>`;$('#g').addEventListener('submit',e=>{e.preventDefault();key=$('#k').value.trim();load();});}
+async function load(){
+ try{const r=await fetch('/api/app?r=admin/stats&key='+encodeURIComponent(key),{cache:'no-store'});if(r.status===401){try{localStorage.removeItem(KS);}catch(e){}gate('That key isn\'t right.');return;}if(!r.ok)throw 0;const d=await r.json();try{localStorage.setItem(KS,key);}catch(e){}render(d);}
+ catch(e){gate('Couldn\'t load the numbers. Check your connection.');}
+}
+const pct=(a,b)=>b?Math.round(a/b*100)+'%':'–';
+function bars(obj,{order,labels={},cls=''}={}){const ent=order?order.filter(k=>obj[k]!=null).map(k=>[k,obj[k]]):Object.entries(obj).sort((a,b)=>b[1]-a[1]);if(!ent.length)return '<p class="empty">Nothing yet.</p>';const max=Math.max(...ent.map(e=>e[1]),1);return `<div class="bars ${cls}">${ent.map(([k,v])=>`<div class="bar"><span title="${esc(labels[k]||k)}">${esc(labels[k]||k)}</span><span class="track"><i style="width:${v/max*100}%"></i></span><b>${v}</b></div>`).join('')}</div>`;}
+function daily(days){
+ const W=760,H=200,l=36,b=28,t=16; const vals=days.map(d=>(d.chat||0)); const act=days.map(d=>(d.signup||0)+(d.signin||0)); const rev=days.map(d=>(d.review_early||0)+(d.review_late||0));
+ const max=Math.max(1,...vals,...act,...rev); const bw=(W-l-8)/days.length; const y=v=>H-b-(v/max)*(H-b-t);
+ const grid=[0,.5,1].map(f=>`<line x1="${l}" x2="${W-8}" y1="${y(max*f)}" y2="${y(max*f)}" stroke="#E0E8E2"/><text x="${l-6}" y="${y(max*f)+4}" text-anchor="end" font-size="11" fill="#53645B">${Math.round(max*f)}</text>`).join('');
+ const g=days.map((d,i)=>{const x=l+i*bw;return `<rect x="${x+bw*.12}" y="${y(vals[i])}" width="${bw*.26}" height="${H-b-y(vals[i])}" fill="#1F4D3A" rx="2"><title>${d.d}: ${vals[i]} chat questions</title></rect><rect x="${x+bw*.4}" y="${y(rev[i])}" width="${bw*.26}" height="${H-b-y(rev[i])}" fill="#7FB59A" rx="2"><title>${d.d}: ${rev[i]} reviews</title></rect><rect x="${x+bw*.68}" y="${y(act[i])}" width="${bw*.2}" height="${H-b-y(act[i])}" fill="#C8D3CC" rx="2"><title>${d.d}: ${act[i]} sign-ins</title></rect>${i%5===0?`<text x="${x+bw/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="#53645B">${d.d.slice(5)}</text>`:''}`;}).join('');
+ return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Daily chat questions, reviews and sign-ins, last 30 days">${grid}${g}</svg><div class="status"><span class="pill">■ Chat questions</span><span class="pill" style="background:#E3F1E9;color:#2B6650">■ Reviews</span><span class="pill" style="background:#EEF1EF;color:#53645B">■ Sign-ins</span></div>`;
+}
+function render(d){
+ const T=d.totals||{};
+ const funnel={'Signed up':T.signup||0,'Saw first-open screens':(T.intro_done||0)+(T.intro_skip||0),'Finished skin questions':T.onboard_done||0,'Added a product':T.shelf_add?Math.min(T.shelf_add,d.users):0,'First review (unlocked)':T.unlock||0,'Review after weeks':T.review_late||0};
+ const TOPIC={find_sunscreen:'Finding a sunscreen',find_moisturiser:'Finding a moisturiser',compare:'Comparing',ingredients:'Ingredients',routine:'Routine',my_product:'A product she has',medical:'Medical question',other:'Other'};
+ $('#app').innerHTML=`<main class="wrap">
+ <div class="top"><div><h1>Skin Peers analytics</h1><span class="sub">Updated ${esc(new Date(d.at).toLocaleString('en-GB'))}. Counts only, no messages or names.</span></div><div class="status"><button class="btn" id="re">Refresh</button><button class="btn" id="lock">Lock</button></div></div>
+ <div class="status"><span class="pill ${d.config.ai?'':'off'}">AI advice: ${d.config.ai?'on ('+esc(d.config.model)+')':'off, rules only'}</span><span class="pill ${/not set/.test(d.config.email)?'off':''}">Sign-in email: ${esc(d.config.email)}</span><span class="pill ${d.samples?'off':''}">Sample reviews: ${d.samples?'on':'off'}</span></div>
+ <section class="grid">
+  <div class="kpi"><span class="k">Accounts</span><span class="v">${d.users}</span><span class="n">${d.onboarded} finished the skin questions</span></div>
+  <div class="kpi"><span class="k">Unlocked</span><span class="v">${pct(d.unlocked,d.onboarded)}</span><span class="n">${d.unlocked} wrote a first review</span></div>
+  <div class="kpi"><span class="k">Real reviews</span><span class="v">${d.reviews.real}</span><span class="n">${d.reviews.early} first impressions, ${d.reviews.late} after weeks</span></div>
+  <div class="kpi"><span class="k">Would buy again</span><span class="v">${pct(d.reviews.again.y||0,d.reviews.real)}</span><span class="n">of real reviews</span></div>
+  <div class="kpi"><span class="k">Chat questions</span><span class="v">${T.chat||0}</span><span class="n">${T.chat_medical||0} medical, sent to the huisarts</span></div>
+  <div class="kpi"><span class="k">Shared concerns</span><span class="v">${pct(d.consent,d.onboarded)}</span><span class="n">chose to share skin concerns</span></div>
+ </section>
+ <section class="card"><h2>Last 30 days</h2>${daily(d.days)}</section>
+ <section class="two">
+  <div class="card"><h2>Funnel</h2>${bars(funnel,{order:Object.keys(funnel),cls:'funnel'})}<p class="sub">From the survey: 8 of 46 said review-to-unlock would make them leave. Watch the drop between "Added a product" and "First review".</p></div>
+  <div class="card"><h2>What they ask the chat</h2>${bars(d.topics,{labels:TOPIC})}</div>
+ </section>
+ <section class="two">
+  <div class="card"><h2>Skin type</h2>${bars(d.profiles.type,{labels:{dry:'Dry',oily:'Oily',combination:'Combination',normal:'Normal',unsure:'Not sure'}})}</div>
+  <div class="card"><h2>Age group</h2>${bars(d.profiles.age,{order:['18-24','25-34','35-44','45-54','55+']})}</div>
+  <div class="card"><h2>Skin shade</h2>${bars(d.profiles.tone,{order:['1','2','3','4','5','6','7','8'],labels:{1:'Shade 1 (lightest)',8:'Shade 8 (deepest)'}})}</div>
+  <div class="card"><h2>Budget and concerns</h2>${bars(d.profiles.budget,{order:['u10','10-20','20-35','any'],labels:{u10:'Under €10','10-20':'€10–20','20-35':'€20–35',any:"Doesn't matter"}})}${bars(d.profiles.concerns)}</div>
+ </section>
+ <section class="two">
+  <div class="card"><h2>Most reviewed (real reviews)</h2>${d.reviews.top.length?bars(Object.fromEntries(d.reviews.top.map(x=>[x.name,x.n]))):'<p class="empty">No real reviews yet.</p>'}<p class="sub">${d.reviews.products} ${d.reviews.products===1?'product has':'products have'} at least one real review. The peer view needs about 10 matched reviews per product.</p></div>
+  <div class="card"><h2>Missing from the catalogue</h2>${Object.keys(d.gaps).length?bars(d.gaps):'<p class="empty">Nothing yet. Products people add that aren\'t in the list show up here.</p>'}</div>
+ </section>
+ <section class="card"><h2>Sample reviews</h2><p class="sub">Marked sample reviews fill the peer numbers while real reviews come in. Switch them off before you launch.</p><label class="switch"><input type="checkbox" id="samp" ${d.samples?'checked':''}> Show sample reviews in the app</label></section>
+ </main>`;
+ $('#re').onclick=load; $('#lock').onclick=()=>{try{localStorage.removeItem(KS);}catch(e){}key='';gate();};
+ $('#samp').onchange=async e=>{e.target.disabled=true;await fetch('/api/app?r=admin/samples',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,on:e.target.checked})});load();};
+}
+key?load():gate();
+})();
+</script>
+</body>
+</html>

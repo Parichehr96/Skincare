@@ -34,3 +34,27 @@ When you delete the data at the end, remove the `survey:responses` and `survey:c
 ## Clearing the data
 
 At the bottom of `results.html` there's a "Delete all answers" button. It asks you to type DELETE, then removes every answer and every sign-up. Use it before launch to clear test answers, and on your deletion date (31 December 2027).
+
+## Skin Peers app (`/app/`)
+
+The app lives at `/app/` and its analytics panel at `/app/admin.html` (same results key as the survey).
+All API calls go through one function, `api/app.js` (`/api/app?r=<route>`), so the free Vercel plan's function limit isn't an issue.
+It uses the same Upstash database as the survey; its keys start with `app:`.
+
+### Settings (Vercel → Project → Settings → Environment Variables)
+
+| Name | What it's for |
+| --- | --- |
+| `ANTHROPIC_API_KEY` | Turns on the AI chat and photo recognition. Without it the chat answers with simple rules and photo recognition is off. |
+| `AI_MODEL` | Optional. Defaults to `claude-haiku-5-5`. |
+| `AI_DAILY_LIMIT` | Optional. Most chat answers per day for everyone together (default 600), to cap the AI bill. |
+| `SMTP_USER`, `SMTP_PASS` | Sign-in email through Gmail: your Gmail address and a Gmail app password. `SMTP_HOST`/`SMTP_PORT` default to Gmail. |
+| `RESEND_API_KEY`, `MAIL_FROM` | Alternative to Gmail: sign-in email through Resend (needs your own domain to email anyone). |
+| `AUTH_TEST_MODE` | Set to `1` only while testing alone: the sign-in code is shown on screen instead of emailed. Anyone could then sign in as any email, so remove it before sharing the link. |
+| `EXPORT_KEY` | Already set for the survey. Opens the analytics panel. |
+
+### Data
+
+- `data/products.json`: the 90 NL products (built from the NL product list, prices checked 27 Oct 2026).
+- `data/sample-reviews.json`: marked sample reviews so matching can be tested. Switch them off in the analytics panel before launch.
+- Chat messages stay on the user's device. Photos are sent to the AI only to read the label and aren't stored.
