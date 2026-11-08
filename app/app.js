@@ -32,7 +32,7 @@ const eur=n=>n==null?'':'€'+Number(n).toFixed(2).replace('.',',');
 const TONES=['#F6EDE4','#F3E7DB','#F7EAD0','#EADABA','#D7BD96','#A07E56','#825C43','#604134'];
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 
-const S={token:store.get('sp-token'),user:null,shelf:[],cfg:{},chat:[],m:{cat:'moist',max:null,shop:null,ff:false,spf:false},cache:{}};
+const S={token:store.get('sp-token'),user:null,shelf:[],cfg:{},chat:[],m:{cat:'moist',max:null,shop:null,ff:false,spf:false,nobreak:false},cache:{}};
 const chatKey=()=>'sp-chat-'+(S.user?S.user.id:'x');
 function saveChat(){store.set(chatKey(),S.chat.slice(-60));}
 
@@ -78,7 +78,7 @@ function dots(yes,total,{size=8,play=false,max=24}={}){
  return `<span class="dots ${play?'play':''}" aria-hidden="true">${h}</span>`;
 }
 function peerLine(p){
- if(p.peer&&p.peer.n>=5) return `<span class="ppeer">${dots(p.peer.yes,p.peer.n,{size:7})}<span>${p.peer.yes} of ${p.peer.n} women like you would buy again</span></span>`;
+ if(p.peer&&p.peer.n>=5) return `<span class="ppeer">${dots(p.peer.yes,p.peer.n,{size:7})}<span>${p.peer.yes} of ${p.peer.n} women like you would buy again</span><span class="ptotal">${p.all.n} reviews in total</span></span>`;
  if(p.all&&p.all.n) return `<span class="ppeer low">${p.peer&&p.peer.n?`Only ${p.peer.n} from women like you yet · `:''}${p.all.yes} of ${p.all.n} reviewers would buy again</span>`;
  return `<span class="ppeer low">No reviews yet</span>`;
 }
@@ -422,16 +422,16 @@ function filtersHTML(){
  const m=S.m; const bmax=BUDGET_MAX[(prof()||{}).budget]||20;
  const t=(k,l,on)=>`<button class="chip sm ${on?'on':''}" aria-pressed="${on}" data-a="mf" data-k="${k}">${on?IC.check:''}${l}</button>`;
  const shops=['Kruidvat','Etos','Douglas','HEMA','Action'];
- return `<div class="chips scroll">${t('max',`Under €${m.max||bmax}`,!!m.max)}${t('ff','Fragrance-free',m.ff)}${m.cat==='moist'?t('spf','With SPF',m.spf):''}${shops.map(s=>`<button class="chip sm ${m.shop===s?'on':''}" aria-pressed="${m.shop===s}" data-a="mshop" data-v="${s}">${m.shop===s?IC.check:''}${s}</button>`).join('')}</div>`;
+ return `<div class="chips scroll">${t('max',`Under €${m.max||bmax}`,!!m.max)}${t('ff','Fragrance-free',m.ff)}${t('nobreak','Rarely breaks out',m.nobreak)}${m.cat==='moist'?t('spf','With SPF',m.spf):''}${shops.map(s=>`<button class="chip sm ${m.shop===s?'on':''}" aria-pressed="${m.shop===s}" data-a="mshop" data-v="${s}">${m.shop===s?IC.check:''}${s}</button>`).join('')}</div>`;
 }
 let mreq=0;
 async function loadMatches(fresh){
  const id=++mreq; const m=S.m; const box=$('#mlist'); if(!box) return;
- const q={cat:m.cat}; if(m.max)q.max=m.max; if(m.shop)q.shop=m.shop; if(m.ff)q.ff='1'; if(m.spf)q.spf='1';
+ const q={cat:m.cat}; if(m.max)q.max=m.max; if(m.shop)q.shop=m.shop; if(m.ff)q.ff='1'; if(m.spf)q.spf='1'; if(m.nobreak)q.nobreak='1';
  try{
   const j=await api('products',{query:q}); if(id!==mreq||!$('#mlist')) return;
   j.products.forEach(p=>S.cache[p.id]=p);
-  if(!j.products.length){box.innerHTML=`<div class="empty"><h3>No matches with these filters</h3><span>Remove a filter to see more products.</span><button class="btn soft small" data-a="mclear">Clear filters</button></div>`;return;}
+  if(!j.products.length){box.innerHTML=`<div class="empty"><h3>No matches with these filters</h3><span>${m.nobreak?'"Rarely breaks out" needs at least 10 reviews per product, so newer products drop out. ':''}Remove a filter to see more products.</span><button class="btn soft small" data-a="mclear">Clear filters</button></div>`;return;}
   const samples=j.products.some(p=>p.samples);
   box.innerHTML=`<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><span class="label">${j.count} ${j.count===1?'match':'matches'}</span>${samples?'<span class="samplebadge">Includes sample reviews</span>':''}</div><div class="list ${fresh?'fresh':''}">${j.products.map((p,i)=>pcard(p).replace('class="pcard"',`class="pcard" style="--i:${Math.min(i,12)}"`)).join('')}</div>`;
  }catch(e){if(id===mreq&&$('#mlist'))box.innerHTML=errorBox(e,'mretry');}
@@ -455,6 +455,13 @@ async function loadProduct(id,view,again){
   $('#pbody').innerHTML=productHTML(d,v); $('#pfoot').innerHTML=productFoot(d.product);
  }catch(e){const b=$('#pbody');if(b)b.innerHTML=errorBox(e,'');}
 }
+function brkLine(b){
+ if(!b||!b.of) return '';
+ const who=b.who==='peer'?'women like you':'reviewers';
+ if(b.of<10) return `<div class="kv"><span>Breakouts</span><b style="font-weight:500;color:var(--muted)">Too few reviews to say</b></div>`;
+ const r=b.n/b.of; const col=r>=.15?'var(--butter-ink)':r<=.06?'var(--forest)':'var(--ink)';
+ return `<div class="kv"><span>Said it broke them out</span><b style="color:${col}">${b.n} of ${b.of} ${who}</b></div>`;
+}
 function flagRow(label,v,good){const txt=v===true?'Yes':v===false?'No':'Not listed';const ok=v==null?'':((v===good)?' style="color:var(--forest)"':' style="color:var(--butter-ink)"');return `<div class="kv"><span>${label}</span><b${ok}>${txt}</b></div>`;}
 function productHTML(d,v){
  const p=d.product, st=d.stats; const s=v==='peer'?st.peer:st.all; const f=p.flags||{};
@@ -465,6 +472,8 @@ function productHTML(d,v){
   <div class="stat">
    ${s.n?`${small?`<div class="note mint" style="padding:12px">${IC.info}<span>${st.peer.n?`Only ${st.peer.n} women like you reviewed this so far.`:'No women like you reviewed this yet.'} Switch to Everyone for a fuller picture.</span></div>`:''}
    <div class="big">${s.yes} <small>of ${s.n} would buy again</small></div>${dots(s.yes,s.n,{size:s.n>24?11:13,play:true})}
+   ${v==='peer'?`<div class="kv" style="border-top:1px solid var(--line);padding-top:10px"><span>Everyone, all skin types</span><b>${st.all.yes} of ${st.all.n} would buy again</b></div>`:''}
+   ${brkLine(st.breakouts)}
    <span class="pmeta">${v==='peer'?`Women with ${esc(groupLabel().toLowerCase())} skin and a similar skin tone. ${st.late} used it for 3 weeks or more.`:`All skin types and ages, from ${st.all.n} reviews on Skin Peers.`}</span>
    ${st.samples?'<span class="samplebadge" style="align-self:flex-start">Includes sample reviews for testing</span>':''}`
    :`<div class="empty" style="padding:8px"><h3>No reviews yet</h3><span>Have you used it? Your review would be the first.</span></div>`}
@@ -473,7 +482,7 @@ function productHTML(d,v){
   ${d.totalNotes?`<button class="btn line" data-a="reviews" data-id="${esc(p.id)}">Read what they wrote (${d.totalNotes})</button>`:''}
   <div class="stat" style="gap:0;padding:6px 18px"><span class="label" style="padding-top:10px">From the ingredient list</span>
    ${p.cat==='sun'?`<div class="kv"><span>Filters</span><b>${f.filters?esc(f.filters[0].toUpperCase()+f.filters.slice(1)):'Not listed'}</b></div>`:''}
-   ${flagRow('Fragrance',f.fragrance,false)}${flagRow('Drying alcohol',f.dryingAlcohol,false)}${p.cat==='moist'?flagRow('Retinol',f.retinol,null):flagRow('Tinted',f.tinted,null)}
+   ${flagRow('Fragrance',f.fragrance,false)}${flagRow('Drying alcohol',f.dryingAlcohol,false)}${p.cat==='moist'?flagRow('Retinol',f.retinol,null):flagRow('Tinted',f.tinted,null)}<div class="kv"><span>Pore-clogging ingredients</span><b style="font-weight:500;color:var(--muted)">Not checked yet</b></div>
    <p class="pmeta" style="margin:8px 0 10px">Read from the ingredient list on the shop's website, ${esc(fmtDate(p.checked))}.</p></div>
   <div class="note butter">${IC.info}<span><b>Independent tests.</b> None on file for this product yet. We're adding independent tests as we find them.</span></div>
   <div class="stat" style="gap:0;padding:6px 18px"><span class="label" style="padding-top:10px">Where to buy</span>${(p.shops||[]).map((s,i)=>`<div class="shoprow"><span>${esc(s.shop)}${s.online===false?' <span class="pmeta">(in shops only)</span>':''}</span><span class="price">${s.price!=null?eur(s.price):''}${s.was?`<s>${eur(s.was)}</s>`:''}</span></div>`).join('')}</div>
@@ -650,7 +659,7 @@ SCREENS.checkin={label:'Check-in',render({id,stage}){
  ck=ck&&ck.id===id&&ck.stage===stage?ck:{id,stage,again:null,feel:[],extra:[],note:'',stopped:null};
  const one=(k,opts)=>opts.map(([v,l])=>`<button class="chip ${ck[k]===v?'on':''}" aria-pressed="${ck[k]===v}" data-a="ck1" data-k="${k}" data-v="${v}">${l}</button>`).join('');
  const many=(k,opts)=>opts.map(([v,l])=>`<button class="chip ${ck[k].includes(v)?'on':''}" aria-pressed="${ck[k].includes(v)}" data-a="ckm" data-k="${k}" data-v="${v}">${ck[k].includes(v)?IC.check:''}${l}</button>`).join('');
- const feel=[['hydrated','Hydrated'],['greasy','Greasy'],['still tight','Still tight'],['stings','Stings'],['no change','No change']].concat(p.cat==='sun'?[['white cast','White cast'],['no white cast','No white cast']]:[]);
+ const feel=[['hydrated','Hydrated'],['greasy','Greasy'],['still tight','Still tight'],['stings','Stings'],['broke out','Broke me out'],['no change','No change']].concat(p.cat==='sun'?[['white cast','White cast'],['no white cast','No white cast']]:[]);
  const stings=ck.feel.includes('stings');
  return `${hdr(stage==='late'?'After a few weeks':'First impressions',{back:true})}
  <div class="body">
@@ -723,7 +732,7 @@ const A={
  mcat:(el)=>{if(S.m.cat===el.dataset.v)return;S.m.cat=el.dataset.v;S.m.spf=false;const seg=el.parentElement;seg.classList.toggle('right',S.m.cat==='sun');seg.querySelectorAll('button').forEach(b=>{const on=b.dataset.v===S.m.cat;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);});top().el.querySelector('.hdr h1').firstChild.textContent=(S.m.cat==='sun'?'Sunscreens':'Moisturisers')+' for you';updateMatches();},
  mf:(el)=>{const k=el.dataset.k;if(k==='max')S.m.max=S.m.max?null:(BUDGET_MAX[(prof()||{}).budget]||20);else S.m[k]=!S.m[k];updateMatches();},
  mshop:(el)=>{S.m.shop=S.m.shop===el.dataset.v?null:el.dataset.v;updateMatches();},
- mclear:()=>{Object.assign(S.m,{max:null,shop:null,ff:false,spf:false});updateMatches();},
+ mclear:()=>{Object.assign(S.m,{max:null,shop:null,ff:false,spf:false,nobreak:false});updateMatches();},
  mretry:()=>updateMatches(),
  askabout:()=>{pendingSay=`Which of these ${S.m.cat==='sun'?'sunscreens':'moisturisers'} is best for me${S.m.max?` under €${S.m.max}`:''}${S.m.shop?` at ${S.m.shop}`:''}?`;go('chat',{},'tab');},
  pview:(el)=>{const t=top();t.params.view=el.dataset.v;refresh();},
@@ -794,4 +803,5 @@ async function boot(){
 }
 A.bootretry=()=>boot();
 boot();
+
 })();

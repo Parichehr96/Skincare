@@ -297,3 +297,4 @@ a{color:var(--forest)}
 .spin{width:22px;height:22px;border-radius:50%;border:3px solid var(--mint);border-top-color:var(--forest);animation:sp 0.8s linear infinite;margin:24px auto}
 @keyframes sp{to{transform:rotate(360deg)}}
 .samplebadge{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:99px;background:var(--butter);color:var(--butter-ink);font-size:11px;font-weight:700}
+.ppeer .ptotal{font-size:12px;font-weight:500;color:var(--muted)}

@@ -9,11 +9,14 @@ const TYPE_ADJ = { "combination|oily": 1, "combination|normal": 1, "dry|normal":
 const PEER_MIN = 0.7;        // similarity needed to count as "a woman like you"
 const PEER_READY = 10;       // the survey: 10 matched reviews satisfy about half; below that we lean on everyone
 const PEER_SOME = 5;
+const BREAK_MIN = 10;        // reviews needed before we say anything about breakouts
+const BREAK_HIGH = 0.15;     // share that earns a caution
+const BREAK_LOW = 0.06;      // share that earns "rarely breaks out"
 
 const TAG_LABEL = {
   hydrated: ["Hydrating", true], greasy: ["Greasy", false], "still tight": ["Still tight", false], stings: ["Stings", false],
   "no change": ["No change", false], "white cast": ["White cast", false], "no white cast": ["No white cast", true],
-  "good under makeup": ["Good under makeup", true], pills: ["Pills", false], "too expensive": ["Too expensive", false], "lasts long": ["Lasts long", true]
+  "broke out": ["Broke them out", false], "good under makeup": ["Good under makeup", true], pills: ["Pills", false], "too expensive": ["Too expensive", false], "lasts long": ["Lasts long", true]
 };
 
 function features(profile) {
@@ -47,7 +50,10 @@ function stats(list, me) {
   const yes = (l) => l.filter((r) => r.a === "y").length;
   const tags = {};
   for (const r of peer.length >= PEER_SOME ? peer : list) for (const t of [...(r.f || []), ...(r.x || [])]) tags[t] = (tags[t] || 0) + 1;
+  const brk = (l) => l.filter((r) => (r.f || []).includes("broke out")).length;
+  const bl = peer.length >= PEER_SOME ? peer : list;
   return {
+    breakouts: { n: brk(bl), of: bl.length, who: peer.length >= PEER_SOME ? "peer" : "all", allN: brk(list), allOf: list.length },
     peer: { yes: yes(peer), n: peer.length },
     all: { yes: yes(list), n: list.length },
     late: (peer.length >= PEER_SOME ? peer : list).filter((r) => r.s === "l").length,
@@ -75,6 +81,13 @@ function judge(p, st, me) {
     if ((f.type === "oily" || f.type === "combination") && tr.rich) { score -= 0.08; cautions.push("A rich texture, which can feel heavy on oilier skin"); }
     if ((f.type === "oily" || f.type === "combination") && tr.light) reasons.push("Light texture");
     if (f.type === "dry" && tr.rich) reasons.push("Rich texture for dry skin");
+    const br = st.breakouts;
+    const prone = c.includes("breakouts") || f.type === "oily" || f.type === "combination";
+    if (br && br.of >= BREAK_MIN) {
+      const who = br.who === "peer" ? "women like you" : "reviewers";
+      if (prone && br.n / br.of >= BREAK_HIGH) { score -= c.includes("breakouts") ? 0.12 : 0.06; cautions.unshift(`${br.n} of ${br.of} ${who} said it broke them out`); }
+      else if (c.includes("breakouts") && br.n / br.of <= BREAK_LOW) reasons.unshift(`Few breakouts: ${br.n} of ${br.of} ${who}`);
+    }
     if (c.includes("breakouts") && tr.blemish) reasons.push("Made for blemish-prone skin");
     if (p.cat === "sun" && f.tone >= 6 && fl.filters === "hybrid") { score -= 0.1; cautions.push("Has mineral filters, which can leave a white cast on deeper skin"); }
     if (p.cat === "sun" && f.tone >= 5 && fl.filters === "chemical") reasons.push("Chemical filters, less likely to leave a white cast");
@@ -91,7 +104,7 @@ function card(p, st, j) {
   return {
     id: p.id, name: p.name, brand: p.brand, cat: p.cat, size: p.size, price: p.price, was: s0.was || null, shop: s0.shop || "",
     spf: p.spf, flags: p.flags, traits: p.traits, shape: p.shape, c: p.c,
-    peer: st.peer, all: st.all, view: st.view, samples: st.samples, score: Math.round(j.score * 1000) / 1000, reasons: j.reasons, cautions: j.cautions
+    peer: st.peer, all: st.all, view: st.view, breakouts: st.breakouts, samples: st.samples, score: Math.round(j.score * 1000) / 1000, reasons: j.reasons, cautions: j.cautions
   };
 }
 
@@ -107,6 +120,7 @@ function rank(reviews, me, q = {}) {
   if (q.spf) list = list.filter((p) => p.spf);
   if (q.light) list = list.filter((p) => p.traits.light);
   if (q.nocast) list = list.filter((p) => p.cat !== "sun" || p.flags.filters !== "hybrid");
+  if (q.nobreak) list = list.filter((p) => { const l = by[p.id] || []; const st = stats(l, me); const b = st.breakouts; return b.of >= BREAK_MIN && b.n / b.of < 0.1; });
   if (q.q) { const w = norm(q.q).split(/\s+/).filter(Boolean); list = list.filter((p) => { const n = norm(p.name + " " + p.brand); return w.every((x) => n.includes(x)); }); }
   return list.map((p) => { const st = stats(by[p.id] || [], me); return card(p, st, judge(p, st, me)); }).sort((a, b) => b.score - a.score);
 }
@@ -126,4 +140,4 @@ function detail(reviews, me, id, unlocked) {
   return { product: { ...card(p, st, j), shops: p.shops, note: p.note, checked: p.checked }, stats: st, reviews: unlocked ? shown : shown.slice(0, 2), locked: unlocked ? 0 : Math.max(0, shown.length - 2), totalNotes: shown.length };
 }
 
-module.exports = { PRODUCTS, BY_ID, SAMPLES, rank, detail, stats, sim, features, allReviews, BUDGET_MAX, PEER_READY, PEER_SOME, PEER_MIN, norm };
+module.exports = { PRODUCTS, BY_ID, SAMPLES, rank, detail, stats, sim, features, allReviews, BUDGET_MAX, PEER_READY, PEER_SOME, PEER_MIN, BREAK_MIN, norm };

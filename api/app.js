@@ -12,7 +12,7 @@ const TYPES = ["dry", "oily", "combination", "normal", "unsure"];
 const SUNS = ["burns", "burns-tans", "tans"];
 const BUDGETS = ["u10", "10-20", "20-35", "any"];
 const CONCERNS = ["breakouts", "redness", "dark spots", "dryness", "sensitivity", "fine lines"];
-const FEEL = ["hydrated", "greasy", "still tight", "stings", "no change", "white cast", "no white cast"];
+const FEEL = ["hydrated", "greasy", "still tight", "stings", "broke out", "no change", "white cast", "no white cast"];
 const EXTRA = ["good under makeup", "pills", "too expensive", "lasts long"];
 const EVENTS = ["intro_done", "intro_skip", "matches_view", "product_view", "buy_click", "scan_open", "barcode", "share", "runout_rebuy", "runout_switch", "why_unlock"];
 
@@ -130,7 +130,7 @@ module.exports = async (req, res) => {
     if (r === "products" && m === "GET") {
       const { all } = await reviewsFor();
       const q = req.query;
-      const list = engine.rank(all, user.profile, { cat: pick(q.cat, ["sun", "moist"]), max: q.max ? Number(q.max) : null, shop: q.shop || null, ff: q.ff === "1", spf: q.spf === "1", light: q.light === "1", nocast: q.nocast === "1", q: q.q ? String(q.q).slice(0, 60) : null });
+      const list = engine.rank(all, user.profile, { cat: pick(q.cat, ["sun", "moist"]), max: q.max ? Number(q.max) : null, shop: q.shop || null, ff: q.ff === "1", spf: q.spf === "1", light: q.light === "1", nocast: q.nocast === "1", nobreak: q.nobreak === "1", q: q.q ? String(q.q).slice(0, 60) : null });
       return sendJSON(res, 200, { products: list.slice(0, Number(q.limit) || 60), count: list.length });
     }
     if (r === "product" && m === "GET") {
@@ -149,7 +149,7 @@ module.exports = async (req, res) => {
       const s = b.stage === "late" ? "l" : "e";
       const p = user.profile;
       const rev = { id: "r_" + crypto.randomBytes(6).toString("base64url"), p: pid, a, s, uid: user.id, at: new Date().toISOString(),
-        f: (Array.isArray(b.feel) ? b.feel : []).filter((x) => FEEL.includes(x)), x: (Array.isArray(b.extra) ? b.extra : []).filter((x) => EXTRA.includes(x)),
+        f: [...new Set((Array.isArray(b.feel) ? b.feel : []).concat(b.stopped === "broke me out" ? ["broke out"] : []))].filter((x) => FEEL.includes(x)), x: (Array.isArray(b.extra) ? b.extra : []).filter((x) => EXTRA.includes(x)),
         n: String(b.note || "").replace(/\s+/g, " ").trim().slice(0, 300), g: { type: p.type, age: p.age, tone: p.tone, sun: p.sun, c: p.concerns || [] } };
       const real = await realReviews();
       const cmds = real.filter((x) => x.uid === user.id && x.p === pid && x.s === s).map((x) => ["LREM", "app:reviews", "1", x._raw]);
