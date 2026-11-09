@@ -110,7 +110,9 @@ function judge(p, st, me, simSt) {
   // Another shop's star rating nudges the order a little while a product has few reviews here; it is never
   // turned into a "would buy again" number.
   const out = outsideOf(p);
-  if (out) score += Math.max(-0.05, Math.min(0.05, (out.rating - 4) * 0.05)) * Math.min(1, Math.log10(out.n + 1) / 2) * (1 - Math.min(1, st.all.n / 30));
+  if (out) score += Math.max(-0.03, Math.min(0.03, (out.rating - 4) * 0.03)) * Math.min(1, Math.log10(out.n + 1) / 2) * (1 - Math.min(1, st.all.n / 30));
+  // With nothing from women here (not even on a near-identical formula), a product sits below ones they have tried.
+  if (st.all.n < PEER_SOME && !(simSt && simSt.all.n >= PEER_SOME)) score -= 0.08;
   const reasons = [], cautions = [];
   const f = me ? features(me) : null;
   const c = (f && f.c) || [];

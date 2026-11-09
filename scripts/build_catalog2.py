@@ -39,7 +39,30 @@ EXCLUDE = re.compile(r'\b(men|mannen|for men|homme|kids?|kinder|baby|junior|oog|
 FACE = re.compile(r'gezicht|face|facial|fluid|flu[iï]de|gelaat|visage|sun (cream|aqua|serum|essence)|airy|uv (defen|essence|expert|aqua)|'
                   r'anthelios|photoderm|capital soleil|uvmune|sun relief|relief sun', re.I)
 
+DOUGLAS_KEEP = {'gezichtscrème': 'moist', 'gezichtsgel': 'moist', 'gezichtslotion': 'moist', 'gezichtsemulsie': 'moist', 'dagcrème': 'moist',
+                'gezichtsbalsem': 'moist', 'gezichtsfluide': 'moist', 'getinte dagcrème': 'moist', 'bb cream': 'moist',
+                'zonnebrandcrème voor het gezicht': 'sun'}
+def douglas_fix(r):
+    if r['shop'] != 'Douglas':
+        return r
+    n = r['name'].strip()
+    for suf in sorted(DOUGLAS_KEEP, key=len, reverse=True):
+        if n.lower().endswith(' ' + suf):
+            r = dict(r)
+            r['name'] = n[: -len(suf)].strip()
+            if DOUGLAS_KEEP[suf] == 'sun' or r['cat'] == 'sun':
+                r['cat'] = 'sun' if DOUGLAS_KEEP[suf] == 'sun' or re.search(r'spf|lsf', n, re.I) else r['cat']
+            return r
+    return None
+
+NIGHT_EYE = re.compile(r'\b(nacht|night|nuit|notte|noche|sleep|slaap|oog|eye|yeux|augen|men\b|mannen|homme|for men|kids?\b|kinder|baby|lip)', re.I)
+
+CLEAN = re.compile(r'\b(reinig|cleans|toner|tonic|micellai|peeling|scrub|masker|mask|exfoli|serum|ampoule|essence|primer|concealer|foundation|adventskal|kussen|set\b|kit\b)', re.I)
 def keep(r):
+    if CLEAN.search(r.get('name') or '') and not re.search(r'sun|spf|zon', r.get('name') or '', re.I):
+        return False
+    if NIGHT_EYE.search(r.get('name') or '') and not re.search(r'dag ?(en|&) ?nacht|day ?(and|&) ?night', r.get('name') or '', re.I):
+        return False
     n = r.get('name') or ''
     if r['cat'] == 'sun':
         if re.search(r'\b(kids?|kinder|baby|aftersun|after sun|lip|zelfbruin|bronz)\b', n, re.I):
@@ -125,7 +148,8 @@ def main(paths):
     raw = []
     for p in paths:
         raw += json.load(open(p))
-    raw = [r for r in raw if r.get('name') and r.get('cat') in ('sun', 'moist')]
+    raw = [r for r in raw if r.get('name') and r.get('cat') in ('sun', 'moist') and 'access denied' not in r['name'].lower()]
+    raw = [x for x in (douglas_fix(r) for r in raw) if x]
     kept = [r for r in raw if keep(r)]
     groups = {}
     for r in kept:
@@ -153,6 +177,44 @@ def main(paths):
             del groups[k]
         else:
             byname.setdefault(nk, k)
+    # fuzzy pass: same brand, same SPF, near-identical name words or identical start of the ingredient list
+    def toks(r):
+        n = norm(r.get('name'))
+        n = re.sub(r'\b\d+(?:[.,]\d+)?\s?(ml|g|gr)\b', ' ', n)
+        drop = {'zonnebrandcreme', 'zonnecreme', 'zonnebrand', 'dagcreme', 'gezichtscreme', 'creme', 'cream', 'voor', 'het', 'je', 'gezicht',
+                'face', 'de', 'en', 'the', 'and', 'ml', 'spf', 'lsf', 'paris', 'zonnefluide', 'fluide', 'fluid'}
+        return {t for t in n.split() if t not in drop and not t.isdigit()}
+    def bkey(r):
+        b = norm(r.get('brand') or (r.get('name') or '').split(' ')[0])
+        return re.sub(r'\b(sun|paris|men expert|skin|care|skincare)\b', '', b).strip().split(' ')[0] if b else ''
+    keys = list(groups)
+    info = {}
+    for k in keys:
+        r0 = groups[k][0]
+        allt = set().union(*[toks(r) for r in groups[k]])
+        inci = next((split_inci(r.get('ingredients'))[:15] for r in groups[k] if r.get('ingredients')), [])
+        info[k] = (bkey(r0), parse_spf(r0.get('name') or ''), allt, [ikey(x) for x in inci])
+    byb = {}
+    for k in keys:
+        byb.setdefault(info[k][0], []).append(k)
+    merged = {}
+    def root(k):
+        while k in merged: k = merged[k]
+        return k
+    for b_, ks in byb.items():
+        if not b_: continue
+        for i in range(len(ks)):
+            for j in range(i + 1, len(ks)):
+                a1, a2 = root(ks[i]), root(ks[j])
+                if a1 == a2: continue
+                _, s1, t1, c1 = info[ks[i]]; _, s2, t2, c2 = info[ks[j]]
+                if s1 != s2: continue
+                jac = len(t1 & t2) / max(1, len(t1 | t2))
+                same_inci = len(c1) >= 12 and c1 == c2
+                if jac >= 0.75 or (same_inci and jac >= 0.4):
+                    keep_k, drop_k = (a1, a2) if a1.startswith('old:') or not a2.startswith('old:') else (a2, a1)
+                    groups[keep_k] += groups.pop(drop_k)
+                    merged[drop_k] = keep_k
     prods = []
     used_ids = set()
     for k, rs in groups.items():
@@ -184,7 +246,7 @@ def main(paths):
         for r in sorted(rs, key=lambda r: (r.get('price') is None, r.get('price') or 0)):
             if any(s['shop'] == r['shop'] for s in shops):
                 continue
-            shops.append({'shop': r['shop'], 'price': r.get('price'), 'url': r['url'], 'online': True})
+            shops.append({'shop': r['shop'], 'price': r.get('price'), 'url': r['url'], 'online': True, **({'partner': True} if r.get('partner') else {})})
         external = [{'source': r['shop'], 'rating': round(float(r['rating']), 1), 'n': int(r['ratingCount']), 'scale': 5, 'date': TODAY, 'url': r['url']}
                     for r in rs if r.get('rating') and r.get('ratingCount')]
         external = list({e['source']: e for e in external}.values())
