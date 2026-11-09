@@ -309,7 +309,7 @@ def main(paths):
 if __name__ == '__main__':
     out = sys.argv[1]
     prods = main(sys.argv[2:])
-    json.dump(prods, open(out, 'w'), ensure_ascii=False, separators=(',', ':'))
+    json.dump(json.loads(json.dumps(prods, ensure_ascii=False).replace('\ufffd', '')), open(out, 'w'), ensure_ascii=False, separators=(',', ':'))
     from collections import Counter
     print(len(prods), Counter(p['cat'] for p in prods), 'with INCI', sum(1 for p in prods if p['ingredients']),
           'with similar', sum(1 for p in prods if p['similar']), 'multi-shop', sum(1 for p in prods if len(p['shops']) > 1))
