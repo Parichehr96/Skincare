@@ -298,3 +298,10 @@ a{color:var(--forest)}
 @keyframes sp{to{transform:rotate(360deg)}}
 .samplebadge{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:99px;background:var(--butter);color:var(--butter-ink);font-size:11px;font-weight:700}
 .ppeer .ptotal{font-size:12px;font-weight:500;color:var(--muted)}
+.srcchip{display:inline-block;font-size:11px;font-weight:600;color:var(--muted);background:var(--line);border-radius:999px;padding:1px 7px;margin-right:6px;vertical-align:1px}
+details.inci{margin:8px 0 0;font-size:13px}
+details.inci summary{cursor:pointer;font-weight:600;color:var(--forest);padding:6px 0}
+details.inci p{margin:4px 0 0;color:var(--muted);line-height:1.5}
+.simrow{all:unset;cursor:pointer;display:flex;flex-direction:column;gap:2px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;font-weight:600}
+.simrow:last-of-type{border-bottom:0}
+.simrow:focus-visible{outline:2px solid var(--forest);outline-offset:2px;border-radius:6px}

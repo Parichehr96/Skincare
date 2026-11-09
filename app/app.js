@@ -78,9 +78,12 @@ function dots(yes,total,{size=8,play=false,max=24}={}){
  return `<span class="dots ${play?'play':''}" aria-hidden="true">${h}</span>`;
 }
 function peerLine(p){
+ const b=p.basis;
  if(p.peer&&p.peer.n>=5) return `<span class="ppeer">${dots(p.peer.yes,p.peer.n,{size:7})}<span>${p.peer.yes} of ${p.peer.n} women like you would buy again</span><span class="ptotal">${p.all.n} reviews in total</span></span>`;
- if(p.all&&p.all.n) return `<span class="ppeer low">${p.peer&&p.peer.n?`Only ${p.peer.n} from women like you yet · `:''}${p.all.yes} of ${p.all.n} reviewers would buy again</span>`;
- return `<span class="ppeer low">No reviews yet</span>`;
+ if(p.all&&p.all.n>=5) return `<span class="ppeer low">${p.peer&&p.peer.n?`Only ${p.peer.n} from women like you yet · `:''}${p.all.yes} of ${p.all.n} reviewers would buy again</span>`;
+ if((b==='similar'||b==='similar-all')&&p.similar){const s=b==='similar'?p.similar.peer:p.similar.all;return `<span class="ppeer low"><span class="srcchip">Similar formula</span>${s.yes} of ${s.n} ${b==='similar'?'women like you':'reviewers'} would buy ${p.similar.k>1?'these':'it'} again</span>`;}
+ if(b==='outside'&&p.outside) return `<span class="ppeer low"><span class="srcchip">${esc(p.outside.source)}</span>${String(p.outside.rating).replace('.',',')} out of 5 from ${p.outside.n} ratings · none here yet</span>`;
+ return `<span class="ppeer low">${p.hasIngredients?'No reviews yet · ingredient check only':'No reviews yet'}</span>`;
 }
 function metaLine(p){
  const bits=[];
@@ -463,12 +466,26 @@ function brkLine(b){
  return `<div class="kv"><span>Said it broke them out</span><b style="color:${col}">${b.n} of ${b.of} ${who}</b></div>`;
 }
 function flagRow(label,v,good){const txt=v===true?'Yes':v===false?'No':'Not listed';const ok=v==null?'':((v===good)?' style="color:var(--forest)"':' style="color:var(--butter-ink)"');return `<div class="kv"><span>${label}</span><b${ok}>${txt}</b></div>`;}
+function title1(t){return esc(/[a-z]/.test(t)?t:t.toLowerCase().replace(/(^|[\s\-/(])([a-z])/g,(m,x,y)=>x+y.toUpperCase()));}
+function evidenceCard(p,st){
+ const b=p.basis;
+ if((b==='similar'||b==='similar-all')&&p.similar){const s=b==='similar'?p.similar.peer:p.similar.all;const who=b==='similar'?'women like you':'reviewers';
+  return `<div class="stat"><span class="label">No reviews of this one yet</span>
+   <div class="big">${s.yes} <small>of ${s.n} ${who} would buy ${p.similar.k>1?'these':'it'} again</small></div>${dots(s.yes,s.n,{size:s.n>24?11:13,play:true})}
+   <span class="pmeta">From reviews of ${p.similar.k>1?p.similar.k+' products with a near-identical formula':'a product with a near-identical formula'}: ${p.similar.names.map(esc).join(', ')}${p.similar.k>2?' and more':''}. The same ingredients in nearly the same order often behave alike, but not always, so this counts for less as reviews of this product come in.</span>
+   ${st.samples||p.samples?'<span class="samplebadge" style="align-self:flex-start">Includes sample reviews for testing</span>':''}</div>`;}
+ if(b==='outside'&&p.outside) return `<div class="stat"><span class="label">No reviews here yet</span>
+   <div class="big">${String(p.outside.rating).replace('.',',')} <small>out of 5 on ${esc(p.outside.source)}, ${p.outside.n} ratings</small></div>
+   <span class="pmeta">This is ${esc(p.outside.source)}'s own star rating, as shown on ${esc(fmtDate(p.outside.date))}. It covers all skin types, and we can't check who rated it, so it doesn't count as "women like you".</span></div>`;
+ return `<div class="empty" style="padding:8px"><h3>No reviews yet</h3><span>${p.hasIngredients?'Below is what the ingredient list and the brand say. ':''}Have you used it? Your review would be the first.</span></div>`;
+}
 function productHTML(d,v){
  const p=d.product, st=d.stats; const s=v==='peer'?st.peer:st.all; const f=p.flags||{};
- const small=v==='peer'&&st.peer.n<10;
+ const small=v==='peer'&&st.peer.n<10; const own=st.all.n>=1;
+ const pore=f.poreClogging; const ext=(p.external||[]).filter(e=>!p.outside||e.source!==p.outside.source||p.basis!=='outside');
  return `${productTop(p)}
   ${p.reasons.length||p.cautions.length?`<div style="display:flex;flex-direction:column;gap:6px">${p.reasons.map(r=>`<span class="reason">${IC.check}${esc(r)}</span>`).join('')}${p.cautions.map(r=>`<span class="reason warn">${IC.info}${esc(r)}</span>`).join('')}</div>`:''}
-  <div class="seg ${v==='all'?'right':''}" role="tablist"><span class="knob"></span><button role="tab" aria-selected="${v==='peer'}" class="${v==='peer'?'on':''}" data-a="pview" data-v="peer">Women like you</button><button role="tab" aria-selected="${v==='all'}" class="${v==='all'?'on':''}" data-a="pview" data-v="all">Everyone</button></div>
+  ${own?`<div class="seg ${v==='all'?'right':''}" role="tablist"><span class="knob"></span><button role="tab" aria-selected="${v==='peer'}" class="${v==='peer'?'on':''}" data-a="pview" data-v="peer">Women like you</button><button role="tab" aria-selected="${v==='all'}" class="${v==='all'?'on':''}" data-a="pview" data-v="all">Everyone</button></div>
   <div class="stat">
    ${s.n?`${small?`<div class="note mint" style="padding:12px">${IC.info}<span>${st.peer.n?`Only ${st.peer.n} women like you reviewed this so far.`:'No women like you reviewed this yet.'} Switch to Everyone for a fuller picture.</span></div>`:''}
    <div class="big">${s.yes} <small>of ${s.n} would buy again</small></div>${dots(s.yes,s.n,{size:s.n>24?11:13,play:true})}
@@ -476,14 +493,21 @@ function productHTML(d,v){
    ${brkLine(st.breakouts)}
    <span class="pmeta">${v==='peer'?`Women with ${esc(groupLabel().toLowerCase())} skin and a similar skin tone. ${st.late} used it for 3 weeks or more.`:`All skin types and ages, from ${st.all.n} reviews on Skin Peers.`}</span>
    ${st.samples?'<span class="samplebadge" style="align-self:flex-start">Includes sample reviews for testing</span>':''}`
-   :`<div class="empty" style="padding:8px"><h3>No reviews yet</h3><span>Have you used it? Your review would be the first.</span></div>`}
-  </div>
+   :`<div class="empty" style="padding:8px"><h3>No women like you yet</h3><span>Switch to Everyone to see all reviews.</span></div>`}
+  </div>`:evidenceCard(p,st)}
   ${st.tags.length?`<div style="display:flex;flex-direction:column;gap:8px"><span class="label">What they mention</span><div class="chips">${st.tags.map(([t,c,good])=>`<span class="tag ${good?'':'grey'}">${esc(t)} ${c}</span>`).join('')}</div></div>`:''}
   ${d.totalNotes?`<button class="btn line" data-a="reviews" data-id="${esc(p.id)}">Read what they wrote (${d.totalNotes})</button>`:''}
   <div class="stat" style="gap:0;padding:6px 18px"><span class="label" style="padding-top:10px">From the ingredient list</span>
    ${p.cat==='sun'?`<div class="kv"><span>Filters</span><b>${f.filters?esc(f.filters[0].toUpperCase()+f.filters.slice(1)):'Not listed'}</b></div>`:''}
-   ${flagRow('Fragrance',f.fragrance,false)}${flagRow('Drying alcohol',f.dryingAlcohol,false)}${p.cat==='moist'?flagRow('Retinol',f.retinol,null):flagRow('Tinted',f.tinted,null)}<div class="kv"><span>Pore-clogging ingredients</span><b style="font-weight:500;color:var(--muted)">Not checked yet</b></div>
-   <p class="pmeta" style="margin:8px 0 10px">Read from the ingredient list on the shop's website, ${esc(fmtDate(p.checked))}.</p></div>
+   ${flagRow('Fragrance',f.fragrance,false)}${flagRow('Drying alcohol',f.dryingAlcohol,false)}${p.cat==='moist'?flagRow('Retinol',f.retinol,null):flagRow('Tinted',f.tinted,null)}
+   <div class="kv"><span>On pore-clogging lists</span>${pore==null?'<b style="font-weight:500;color:var(--muted)">Not checked yet</b>':pore.length?`<b style="color:var(--butter-ink);text-align:right">${pore.map(title1).join(', ')}</b>`:'<b style="color:var(--forest)">None found</b>'}</div>
+   ${p.actives&&p.actives.length?`<div class="kv"><span>Notable ingredients</span><b style="font-weight:500;text-align:right">${p.actives.map(esc).join(', ')}</b></div>`:''}
+   ${pore&&pore.length?`<p class="pmeta" style="margin:8px 0 0">These ingredients show up on common pore-clogging lists, which come mostly from old lab tests on single ingredients. How a whole product behaves on your skin varies, so check what women like you report too.</p>`:''}
+   ${p.ingredients&&p.ingredients.length?`<details class="inci"><summary>Full ingredient list (${p.ingredients.length})</summary><p>${p.ingredients.map(title1).join(', ')}</p></details>`:''}
+   <p class="pmeta" style="margin:8px 0 10px">${p.ingredientsSource?`Read from the ingredient list on ${esc(p.ingredientsSource.shop)}'s website, ${esc(fmtDate(p.ingredientsSource.date))}. Brands change formulas, so check the pack.`:`Read from the ingredient list on the shop's website, ${esc(fmtDate(p.checked))}.`}</p></div>
+  ${p.claims&&p.claims.length?`<div class="stat" style="gap:8px"><span class="label">What the brand says</span><div class="chips">${p.claims.map(c=>`<span class="tag grey">${esc(c)}</span>`).join('')}</div><span class="pmeta">From the product description. These are the brand's claims, not checked by us or by women here.</span></div>`:''}
+  ${ext.length?`<div class="stat" style="gap:0;padding:6px 18px"><span class="label" style="padding-top:10px">Ratings on other sites</span>${ext.map(e=>`<div class="kv"><span>${esc(e.source)}</span><b>${String(e.rating).replace('.',',')} out of 5 · ${e.n} ratings</b></div>`).join('')}<p class="pmeta" style="margin:8px 0 10px">The shops' own star ratings, all skin types, as shown on ${esc(fmtDate(ext[0].date))}. We don't copy their reviews.</p></div>`:''}
+  ${p.similarList&&p.similarList.length?`<div class="stat" style="gap:8px"><span class="label">Similar formulas</span>${p.similarList.map(x=>`<button class="simrow" data-a="product" data-id="${esc(x.id)}"><span>${esc(x.name)}</span><span class="pmeta">${x.same?'Same formula':'Very similar ingredients'}${x.price!=null?' · '+eur(x.price):''}${x.reviews?' · '+x.reviews+' reviews':''}</span></button>`).join('')}<span class="pmeta">Matched on the ingredient list: the same ingredients in nearly the same order.</span></div>`:''}
   <div class="note butter">${IC.info}<span><b>Independent tests.</b> None on file for this product yet. We're adding independent tests as we find them.</span></div>
   <div class="stat" style="gap:0;padding:6px 18px"><span class="label" style="padding-top:10px">Where to buy</span>${(p.shops||[]).map((s,i)=>`<div class="shoprow"><span>${esc(s.shop)}${s.online===false?' <span class="pmeta">(in shops only)</span>':''}</span><span class="price">${s.price!=null?eur(s.price):''}${s.was?`<s>${eur(s.was)}</s>`:''}</span></div>`).join('')}</div>
   <p class="fine" style="margin:0">Prices as shown on ${esc(fmtDate(p.checked))} and may have changed. No shop or brand pays for its place here.</p>`;

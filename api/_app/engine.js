@@ -63,13 +63,54 @@ function stats(list, me) {
   };
 }
 
+// Evidence a product borrows before it has enough reviews of its own: reviews of products with a near-identical
+// formula (same ingredients, in nearly the same order). Shared ingredients don't guarantee the same result, so this
+// only sets the starting point, and it fades as the product gets its own reviews.
+const SIM_MIN = 0.6;
+function similarStats(p, by, me) {
+  const out = { peer: { yes: 0, n: 0 }, all: { yes: 0, n: 0 }, products: [] };
+  for (const s of p.similar || []) {
+    if (s.s < SIM_MIN && !s.same) continue;
+    const q = BY_ID[s.id];
+    if (!q) continue;
+    const st = stats(by[s.id] || [], me);
+    if (!st.all.n) continue;
+    out.peer.yes += st.peer.yes; out.peer.n += st.peer.n; out.all.yes += st.all.yes; out.all.n += st.all.n;
+    out.products.push({ id: q.id, name: q.name, same: !!s.same, s: s.s });
+  }
+  return out;
+}
+function outsideOf(p) {
+  const ex = (p.external || []).filter((e) => e.n >= 5).sort((a, b) => b.n - a.n);
+  return ex[0] || null;
+}
+// What the headline number rests on, strongest first: her peers, everyone here, peers on similar formulas,
+// another shop's rating, or only the label.
+function basisOf(st, simSt, outside) {
+  if (st.peer.n >= PEER_SOME) return "peer";
+  if (st.all.n >= PEER_SOME) return "all";
+  if (simSt && simSt.peer.n >= PEER_SOME) return "similar";
+  if (simSt && simSt.all.n >= PEER_SOME) return "similar-all";
+  if (outside) return "outside";
+  return "label";
+}
+
 // Score in 0..1, plus short reasons she can read. Rules come from the survey and the review data.
-function judge(p, st, me) {
-  // Shrink small samples toward the average, so 2 of 2 never beats 18 of 24.
-  const allRate = (st.all.yes + 8 * 0.6) / (st.all.n + 8);
-  const peerRate = (st.peer.yes + 5 * allRate) / (st.peer.n + 5);
+function judge(p, st, me, simSt) {
+  // Shrink small samples toward a starting point, so 2 of 2 never beats 18 of 24. The starting point is the
+  // average, or what women said about near-identical formulas when there is enough of that.
+  let base = 0.6;
+  if (simSt && simSt.all.n >= PEER_SOME) base = (simSt.all.yes + 8 * 0.6) / (simSt.all.n + 8);
+  const allRate = (st.all.yes + 8 * base) / (st.all.n + 8);
+  let peerPrior = allRate;
+  if (simSt && simSt.peer.n >= PEER_SOME && st.all.n < PEER_READY) peerPrior = (simSt.peer.yes + 5 * allRate) / (simSt.peer.n + 5);
+  const peerRate = (st.peer.yes + 5 * peerPrior) / (st.peer.n + 5);
   let score = st.peer.n >= PEER_SOME ? 0.7 * peerRate + 0.3 * allRate : 0.3 * peerRate + 0.7 * allRate;
   score += Math.min(0.06, Math.log10(st.all.n + 1) * 0.03);
+  // Another shop's star rating nudges the order a little while a product has few reviews here; it is never
+  // turned into a "would buy again" number.
+  const out = outsideOf(p);
+  if (out) score += Math.max(-0.05, Math.min(0.05, (out.rating - 4) * 0.05)) * Math.min(1, Math.log10(out.n + 1) / 2) * (1 - Math.min(1, st.all.n / 30));
   const reasons = [], cautions = [];
   const f = me ? features(me) : null;
   const c = (f && f.c) || [];
@@ -91,6 +132,8 @@ function judge(p, st, me) {
     if (c.includes("breakouts") && tr.blemish) reasons.push("Made for blemish-prone skin");
     if (p.cat === "sun" && f.tone >= 6 && fl.filters === "hybrid") { score -= 0.1; cautions.push("Has mineral filters, which can leave a white cast on deeper skin"); }
     if (p.cat === "sun" && f.tone >= 5 && fl.filters === "chemical") reasons.push("Chemical filters, less likely to leave a white cast");
+    const pore = fl.poreClogging || [];
+    if (c.includes("breakouts") && pore.length) { score -= 0.04 * Math.min(2, pore.length); cautions.push(`Has ${pore.length === 1 ? "an ingredient" : pore.length + " ingredients"} on common pore-clogging lists`); }
     if (fl.retinol && (c.includes("sensitivity") || c.includes("redness"))) { score -= 0.06; cautions.push("Contains retinol, which can irritate sensitive skin"); }
     if (c.includes("sensitivity") && tr.sensitive) reasons.push("Made for sensitive skin");
     const bmax = BUDGET_MAX[me.budget];
@@ -99,13 +142,24 @@ function judge(p, st, me) {
   return { score: Math.max(0, Math.min(1, score)), reasons: reasons.slice(0, 2), cautions: cautions.slice(0, 2) };
 }
 
-function card(p, st, j) {
+function card(p, st, j, simSt) {
   const s0 = p.shops[0] || {};
+  const outside = outsideOf(p);
+  const basis = basisOf(st, simSt, outside);
   return {
     id: p.id, name: p.name, brand: p.brand, cat: p.cat, size: p.size, price: p.price, was: s0.was || null, shop: s0.shop || "",
-    spf: p.spf, flags: p.flags, traits: p.traits, shape: p.shape, c: p.c,
-    peer: st.peer, all: st.all, view: st.view, breakouts: st.breakouts, samples: st.samples, score: Math.round(j.score * 1000) / 1000, reasons: j.reasons, cautions: j.cautions
+    shopCount: p.shops.length, spf: p.spf, flags: p.flags, traits: p.traits, shape: p.shape, c: p.c,
+    peer: st.peer, all: st.all, view: st.view, breakouts: st.breakouts, samples: st.samples, score: Math.round(j.score * 1000) / 1000, reasons: j.reasons, cautions: j.cautions,
+    basis, similar: basis === "similar" || basis === "similar-all" ? { peer: simSt.peer, all: simSt.all, k: simSt.products.length, names: simSt.products.slice(0, 2).map((x) => x.name) } : null,
+    outside: outside ? { source: outside.source, rating: outside.rating, n: outside.n, date: outside.date } : null,
+    hasIngredients: !!(p.ingredients && p.ingredients.length)
   };
+}
+function evaluate(p, by, me) {
+  const st = stats(by[p.id] || [], me);
+  const simSt = st.all.n < PEER_READY ? similarStats(p, by, me) : null;
+  const j = judge(p, st, me, simSt);
+  return { st, simSt, j, c: card(p, st, j, simSt) };
 }
 
 function norm(t) { return String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
@@ -122,22 +176,25 @@ function rank(reviews, me, q = {}) {
   if (q.nocast) list = list.filter((p) => p.cat !== "sun" || p.flags.filters !== "hybrid");
   if (q.nobreak) list = list.filter((p) => { const l = by[p.id] || []; const st = stats(l, me); const b = st.breakouts; return b.of >= BREAK_MIN && b.n / b.of < 0.1; });
   if (q.q) { const w = norm(q.q).split(/\s+/).filter(Boolean); list = list.filter((p) => { const n = norm(p.name + " " + p.brand); return w.every((x) => n.includes(x)); }); }
-  return list.map((p) => { const st = stats(by[p.id] || [], me); return card(p, st, judge(p, st, me)); }).sort((a, b) => b.score - a.score);
+  return list.map((p) => evaluate(p, by, me).c).sort((a, b) => b.score - a.score);
 }
 
 function detail(reviews, me, id, unlocked) {
   const p = BY_ID[id];
   if (!p) return null;
   const list = reviews.filter((r) => r.p === id);
-  const st = stats(list, me);
-  const j = judge(p, st, me);
+  const by = groupBy(reviews);
+  const { st, simSt, j, c } = evaluate(p, by, me);
   const f = features(me);
   const scored = list.map((r) => ({ r, s: f ? sim(f, r.g) : 0 })).sort((a, b) => (b.s >= PEER_MIN) - (a.s >= PEER_MIN) || (b.r.at || "").localeCompare(a.r.at || "") || b.s - a.s);
   const shown = scored.filter((x) => x.r.n).map(({ r, s }) => ({
     id: r.id, again: r.a, note: r.n, stage: r.s, like: s >= PEER_MIN, sample: !!r.sample,
     who: [r.g && r.g.type && r.g.type !== "unsure" ? r.g.type[0].toUpperCase() + r.g.type.slice(1) : "", r.g && r.g.age].filter(Boolean).join(", ")
   }));
-  return { product: { ...card(p, st, j), shops: p.shops, note: p.note, checked: p.checked }, stats: st, reviews: unlocked ? shown : shown.slice(0, 2), locked: unlocked ? 0 : Math.max(0, shown.length - 2), totalNotes: shown.length };
+  const sims = (p.similar || []).map((s) => ({ ...s, q: BY_ID[s.id] })).filter((s) => s.q).slice(0, 4)
+    .map((s) => ({ id: s.id, name: s.q.name, price: s.q.price, same: !!s.same, s: s.s, reviews: (by[s.id] || []).length }));
+  return { product: { ...c, shops: p.shops, note: p.note, checked: p.checked, ingredients: p.ingredients || null, ingredientsSource: p.ingredientsSource || null,
+    actives: p.actives || [], claims: p.claims || [], external: p.external || [], similarList: sims, similarUsed: simSt ? simSt.products.length : 0 }, stats: st, reviews: unlocked ? shown : shown.slice(0, 2), locked: unlocked ? 0 : Math.max(0, shown.length - 2), totalNotes: shown.length };
 }
 
-module.exports = { PRODUCTS, BY_ID, SAMPLES, rank, detail, stats, sim, features, allReviews, BUDGET_MAX, PEER_READY, PEER_SOME, PEER_MIN, BREAK_MIN, norm };
+module.exports = { PRODUCTS, BY_ID, SAMPLES, rank, detail, stats, sim, features, allReviews, BUDGET_MAX, PEER_READY, PEER_SOME, PEER_MIN, BREAK_MIN, SIM_MIN, norm };

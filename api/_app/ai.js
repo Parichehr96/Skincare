@@ -36,9 +36,14 @@ function compact(c) {
     id: c.id, name: c.name, type: c.cat === "sun" ? "sunscreen" : "moisturiser", price_eur: c.price, shop: c.shop, spf: c.spf,
     fragrance: f.fragrance, drying_alcohol: f.dryingAlcohol, filters: f.filters, tinted: f.tinted, retinol: f.retinol, texture: c.traits.light ? "light" : c.traits.rich ? "rich" : "medium",
     women_like_her: c.peer.n ? `${c.peer.yes} of ${c.peer.n} would buy again` : "none yet",
+    evidence: c.basis === "similar" && c.similar ? `no reviews of this product yet; on near-identical formulas ${c.similar.peer.yes} of ${c.similar.peer.n} women like her would buy again` :
+      c.basis === "similar-all" && c.similar ? `no reviews of this product yet; on near-identical formulas ${c.similar.all.yes} of ${c.similar.all.n} reviewers would buy again` :
+      c.basis === "outside" && c.outside ? `no reviews here yet; ${c.outside.source}'s own star rating is ${c.outside.rating} of 5 from ${c.outside.n} ratings (all skin types)` :
+      c.basis === "label" ? "no reviews yet; only the ingredient list" : "reviews on Skin Peers",
+    pore_clogging_list: c.flags && Array.isArray(c.flags.poreClogging) ? (c.flags.poreClogging.length ? c.flags.poreClogging.join(", ") : "none found") : "not checked yet",
     everyone: `${c.all.yes} of ${c.all.n} would buy again`,
     breakouts: c.breakouts && c.breakouts.of >= engine.BREAK_MIN ? `${c.breakouts.n} of ${c.breakouts.of} ${c.breakouts.who === "peer" ? "women like her" : "reviewers"} said it broke them out` : "too few reviews to say",
-    pore_clogging_ingredients: "not checked yet", fits: c.reasons, watch_out: c.cautions
+    fits: c.reasons, watch_out: c.cautions
   };
 }
 
@@ -47,12 +52,13 @@ const SYSTEM = (profile, cands, samples) => `You are the assistant in Skin Peers
 How you work:
 - Your baseline is real peer reviews: always say whose reviews you draw on, with the exact numbers given ("9 of 12 women with skin like yours would buy it again"). Never invent numbers, reviews, prices, tests or studies.
 - On top of reviews you may explain ingredients from the flags given (fragrance, drying alcohol, filters, retinol, texture). Name the source: "from the ingredient list".
+- Each candidate has "evidence": say plainly what a number rests on. Reviews of near-identical formulas are "similar products", not this product; a shop's star rating is that shop's rating for all skin types. Never present either as "women like you" reviews of this product.
 - Only suggest products from the CANDIDATES list, by their id. If nothing fits, say so and ask one short question.
 - No brand pays for a spot. Never favour a shop or brand.
 - You give general skincare guidance, not medical advice. Never diagnose or name a condition. If she mentions symptoms (rash, swelling, pain, bleeding, a changing mole, a reaction that won't settle) or prescription medicine, set "medical": true, tell her to contact her huisarts and point to Thuisarts.nl, say "call 112" only for swelling of the face or trouble breathing, and suggest pausing new products. Don't suggest products for the symptom itself.
 - Keep replies short: 1 to 3 sentences, warm and plain. Reply in the language she writes in (Dutch or English).
 - She may ask about her routine or how to use a product: answer briefly and safely.
-- Breakouts ("puistjes", acne-prone, "will it break me out", blemishes): answer from the "breakouts" numbers, which come from reviews, and say so. Prefer products with few reported breakouts. We have not checked ingredient lists for pore-clogging ingredients yet: never claim a product is non-comedogenic or "won't clog pores". Persistent or painful acne is for the huisarts.
+- Breakouts ("puistjes", acne-prone, "will it break me out", blemishes): answer from the "breakouts" numbers, which come from reviews, and say so. Prefer products with few reported breakouts. "pore_clogging_list" names ingredients that appear on common pore-clogging lists (old single-ingredient tests): you may mention them, but never promise a product won't clog pores or call it non-comedogenic yourself; if the brand claims it, say it's the brand's claim. Persistent or painful acne is for the huisarts.
 ${samples ? "- Some review numbers include sample reviews used for testing. That's fine; just use the numbers as given.\n" : ""}
 HER PROFILE: ${profileLine(profile)}
 
@@ -78,7 +84,7 @@ function fallback(text, profile, reviews) {
   const list = engine.rank(reviews, profile, q).slice(0, 2);
   if (!list.length) return { reply: "Nothing matches all of that yet. Want me to drop one of the filters?", products: [], chips: ["Any shop", "Any price"], topic: q.cat === "sun" ? "find_sunscreen" : "find_moisturiser", medical: false };
   const top = list[0];
-  if (brk) { const b = top.breakouts; return { reply: `Fewest breakouts for you: ${top.name}. ${b.n} of ${b.of} ${b.who === "peer" ? "women with skin like yours" : "reviewers"} said it broke them out. That's from reviews; we haven't checked ingredients for pore-clogging yet.`, products: list.map((x) => x.id), chips: ["Cheaper?", "Fragrance-free", "See all"], topic: q.cat === "sun" ? "find_sunscreen" : "find_moisturiser", medical: false }; }
+  if (brk) { const b = top.breakouts; return { reply: `Fewest breakouts for you: ${top.name}. ${b.n} of ${b.of} ${b.who === "peer" ? "women with skin like yours" : "reviewers"} said it broke them out. That's what women reported, not a promise for your skin.`, products: list.map((x) => x.id), chips: ["Cheaper?", "Fragrance-free", "See all"], topic: q.cat === "sun" ? "find_sunscreen" : "find_moisturiser", medical: false }; }
   const who = top.peer.n >= engine.PEER_SOME ? `${top.peer.yes} of ${top.peer.n} women with skin like yours would buy it again` : `${top.all.yes} of ${top.all.n} reviewers would buy it again`;
   return { reply: `Top pick for you: ${top.name}. ${who}.`, products: list.map((x) => x.id), chips: ["Cheaper?", "Fragrance-free", "See all"], topic: q.cat === "sun" ? "find_sunscreen" : "find_moisturiser", medical: false };
 }
