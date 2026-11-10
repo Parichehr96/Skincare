@@ -52,13 +52,12 @@ DRYING_ALCOHOL = ['alcohol', 'alcohol denat', 'sd alcohol', 'ethanol', 'isopropy
 RETINOIDS = ['retinol', 'retinyl palmitate', 'retinal', 'retinaldehyde', 'hydroxypinacolone retinoate', 'retinyl retinoate', 'retinyl acetate',
              'retinyl propionate', 'retinyl linoleate']
 RETINOID_LABEL = {'retinol': 'Retinol', 'retinal': 'Retinal', 'retinaldehyde': 'Retinal', 'hydroxypinacolone retinoate': 'Retinoate (HPR)'}
-# Exfoliating acids. Lactic and citric acid also appear in tiny amounts to set the pH, so lactic acid only counts in the
-# top half of the list, and citric acid never counts.
+# Exfoliating acids. Several also appear in tiny amounts to set the pH or keep a product fresh (lactic, salicylic), so an
+# acid only counts in the top half of the list. Citric acid never counts.
 ACIDS = [('glycolic acid', 'Glycolic acid'), ('lactic acid', 'Lactic acid'), ('mandelic acid', 'Mandelic acid'),
          ('salicylic acid', 'Salicylic acid'), ('capryloyl salicylic acid', 'Capryloyl salicylic acid'), ('betaine salicylate', 'Betaine salicylate'),
          ('gluconolactone', 'Gluconolactone (PHA)'), ('lactobionic acid', 'Lactobionic acid (PHA)'), ('malic acid', 'Malic acid'),
          ('tartaric acid', 'Tartaric acid')]
-PH_ONLY = {'lactic acid', 'malic acid', 'tartaric acid'}
 AZELAIC = [('azelaic acid', 'Azelaic acid'), ('potassium azeloyl diglycinate', 'Azelaic acid derivative')]
 VITAMIN_C = [('ascorbic acid', 'Ascorbic acid'), ('3 o ethyl ascorbic acid', 'Ethyl ascorbic acid'), ('ethyl ascorbic acid', 'Ethyl ascorbic acid'),
              ('ascorbyl glucoside', 'Ascorbyl glucoside'), ('sodium ascorbyl phosphate', 'Sodium ascorbyl phosphate'),
@@ -123,7 +122,7 @@ def analyse(inci_list):
         out = []
         for word, label in table:
             for i, k in enumerate(keys):
-                if (k == word or k.startswith(word + ' ')) and (limit is None or word not in PH_ONLY or i < limit):
+                if (k == word or k.startswith(word + ' ')) and (limit is None or i < limit):
                     if label not in out:
                         out.append(label)
                     break
@@ -147,6 +146,7 @@ def analyse(inci_list):
         'benzoylPeroxide': has(keys, 'benzoyl peroxide'),
         'azelaic': found(AZELAIC),
         'vitaminC': vitc,
+        'ascorbicHigh': any(k == 'ascorbic acid' for k in keys[:max(8, len(keys) // 2)]),
         'surfactants': {'strong': found(SURF_STRONG), 'mild': found(SURF_MILD)},
         'tinted': any(has(keys, t) for t in TINT),
         'poreClogging': pore,
@@ -195,19 +195,20 @@ def notes(an, kind):
         return []
     out = []
     acids, ret = an.get('acids') or [], an.get('retinoids') or []
-    leave_on = kind not in ('cleanser', 'mask')
+    leave_on = kind not in ('cleanser', 'mask', 'sunscreen')
     if acids and ret:
         out.append('Has exfoliating acids and a retinoid. Together they can irritate, so start slowly.')
     elif acids:
         out.append('Has exfoliating acids. With a retinoid in the same routine they can irritate.'
                    + (' Use sunscreen by day.' if leave_on else ''))
     elif ret:
-        out.append('Has a retinoid, which can irritate at first. Use sunscreen by day. Pregnant or breastfeeding? Ask your huisarts or pharmacist first.')
+        out.append('Has a retinoid, which can irritate at first.' + (' Use sunscreen by day.' if leave_on else '')
+                   + ' Pregnant or breastfeeding? Ask your huisarts or pharmacist first.')
     if an.get('benzoylPeroxide'):
         out.append('Has benzoyl peroxide, which can dry the skin and bleach towels and pillowcases.')
     if an.get('azelaic'):
         out.append('Has azelaic acid, which can tingle at first.')
-    if 'Ascorbic acid' in (an.get('vitaminC') or []):
+    if an.get('ascorbicHigh'):
         out.append('Has pure vitamin C (ascorbic acid), which can sting on sensitive skin.')
     if kind == 'cleanser':
         s = an.get('surfactants') or {}
