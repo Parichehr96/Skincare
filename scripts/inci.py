@@ -49,7 +49,33 @@ FRAGRANCE = ['parfum', 'fragrance', 'aroma']
 FRAG_ALLERGENS = ['linalool', 'limonene', 'citronellol', 'geraniol', 'coumarin', 'citral', 'hexyl cinnamal', 'eugenol', 'benzyl salicylate',
                   'benzyl benzoate', 'alpha isomethyl ionone', 'farnesol', 'isoeugenol', 'cinnamal', 'benzyl cinnamate', 'amyl cinnamal']
 DRYING_ALCOHOL = ['alcohol', 'alcohol denat', 'sd alcohol', 'ethanol', 'isopropyl alcohol', 'sd alcohol 40']
-RETINOIDS = ['retinol', 'retinyl palmitate', 'retinal', 'hydroxypinacolone retinoate', 'retinyl retinoate', 'retinyl acetate']
+RETINOIDS = ['retinol', 'retinyl palmitate', 'retinal', 'retinaldehyde', 'hydroxypinacolone retinoate', 'retinyl retinoate', 'retinyl acetate',
+             'retinyl propionate', 'retinyl linoleate']
+RETINOID_LABEL = {'retinol': 'Retinol', 'retinal': 'Retinal', 'retinaldehyde': 'Retinal', 'hydroxypinacolone retinoate': 'Retinoate (HPR)'}
+# Exfoliating acids. Lactic and citric acid also appear in tiny amounts to set the pH, so lactic acid only counts in the
+# top half of the list, and citric acid never counts.
+ACIDS = [('glycolic acid', 'Glycolic acid'), ('lactic acid', 'Lactic acid'), ('mandelic acid', 'Mandelic acid'),
+         ('salicylic acid', 'Salicylic acid'), ('capryloyl salicylic acid', 'Capryloyl salicylic acid'), ('betaine salicylate', 'Betaine salicylate'),
+         ('gluconolactone', 'Gluconolactone (PHA)'), ('lactobionic acid', 'Lactobionic acid (PHA)'), ('malic acid', 'Malic acid'),
+         ('tartaric acid', 'Tartaric acid')]
+PH_ONLY = {'lactic acid', 'malic acid', 'tartaric acid'}
+AZELAIC = [('azelaic acid', 'Azelaic acid'), ('potassium azeloyl diglycinate', 'Azelaic acid derivative')]
+VITAMIN_C = [('ascorbic acid', 'Ascorbic acid'), ('3 o ethyl ascorbic acid', 'Ethyl ascorbic acid'), ('ethyl ascorbic acid', 'Ethyl ascorbic acid'),
+             ('ascorbyl glucoside', 'Ascorbyl glucoside'), ('sodium ascorbyl phosphate', 'Sodium ascorbyl phosphate'),
+             ('magnesium ascorbyl phosphate', 'Magnesium ascorbyl phosphate'), ('ascorbyl tetraisopalmitate', 'Ascorbyl tetraisopalmitate'),
+             ('tetrahexyldecyl ascorbate', 'Tetrahexyldecyl ascorbate'), ('ascorbyl palmitate', 'Ascorbyl palmitate')]
+# Cleansing agents. Sulfates such as SLS clean strongly and can feel drying; the others are usually milder.
+SURF_STRONG = [('sodium lauryl sulfate', 'Sodium lauryl sulfate'), ('ammonium lauryl sulfate', 'Ammonium lauryl sulfate'),
+               ('sodium laureth sulfate', 'Sodium laureth sulfate'), ('ammonium laureth sulfate', 'Ammonium laureth sulfate'),
+               ('sodium coco sulfate', 'Sodium coco-sulfate'), ('sodium myreth sulfate', 'Sodium myreth sulfate')]
+SURF_MILD = [('cocamidopropyl betaine', 'Cocamidopropyl betaine'), ('coco glucoside', 'Coco-glucoside'), ('decyl glucoside', 'Decyl glucoside'),
+             ('lauryl glucoside', 'Lauryl glucoside'), ('caprylyl capryl glucoside', 'Caprylyl/capryl glucoside'),
+             ('sodium cocoyl isethionate', 'Sodium cocoyl isethionate'), ('sodium lauroyl methyl isethionate', 'Sodium lauroyl methyl isethionate'),
+             ('sodium lauroyl sarcosinate', 'Sodium lauroyl sarcosinate'), ('sodium cocoyl glutamate', 'Sodium cocoyl glutamate'),
+             ('disodium cocoyl glutamate', 'Disodium cocoyl glutamate'), ('sodium lauroyl glutamate', 'Sodium lauroyl glutamate'),
+             ('sodium methyl cocoyl taurate', 'Sodium methyl cocoyl taurate'), ('sodium cocoamphoacetate', 'Sodium cocoamphoacetate'),
+             ('disodium laureth sulfosuccinate', 'Disodium laureth sulfosuccinate'), ('potassium cocoyl glycinate', 'Potassium cocoyl glycinate'),
+             ('sodium cocoyl glycinate', 'Sodium cocoyl glycinate'), ('sodium c14 16 olefin sulfonate', 'Sodium C14-16 olefin sulfonate')]
 TINT = ['ci 77491', 'ci 77492', 'ci 77499', 'iron oxides']
 # Ingredients that turn up on common "pore-clogging" lists. Those lists go back mostly to rabbit-ear tests
 # (Fulton 1989, J Soc Cosmet Chem 40:321-333); how a full product behaves on a face varies, so the app says
@@ -93,12 +119,35 @@ def analyse(inci_list):
         for a, label in ACTIVES.items():
             if a in k and label not in [x['label'] for x in acts]:
                 acts.append({'label': label, 'pos': i + 1})
+    def found(table, limit=None):
+        out = []
+        for word, label in table:
+            for i, k in enumerate(keys):
+                if (k == word or k.startswith(word + ' ')) and (limit is None or word not in PH_ONLY or i < limit):
+                    if label not in out:
+                        out.append(label)
+                    break
+        return out
+    acids = found(ACIDS, limit=max(8, len(keys) // 2))
+    vitc = found(VITAMIN_C)
+    retinoids = []
+    for r in RETINOIDS:
+        if has(keys, r):
+            lab = RETINOID_LABEL.get(r) or ('Retinyl ester (' + r.capitalize() + ')' if r.startswith('retinyl') else r.capitalize())
+            if lab not in retinoids:
+                retinoids.append(lab)
     oils_early = sum(1 for k in keys[:8] if re.search(r'\b(oil|butter|wax|petrolatum|paraffinum)\b', k))
     return {
         'filters': filters, 'mineralFilters': min_, 'chemicalFilters': len(chem),
         'fragrance': frag, 'fragranceAllergens': allergens,
         'dryingAlcohol': bool(da and da[0] < 12), 'dryingAlcoholPos': (da[0] + 1) if da else None,
         'retinol': any(has(keys, r) for r in RETINOIDS),
+        'retinoids': retinoids,
+        'acids': acids,
+        'benzoylPeroxide': has(keys, 'benzoyl peroxide'),
+        'azelaic': found(AZELAIC),
+        'vitaminC': vitc,
+        'surfactants': {'strong': found(SURF_STRONG), 'mild': found(SURF_MILD)},
         'tinted': any(has(keys, t) for t in TINT),
         'poreClogging': pore,
         'actives': acts[:8],
@@ -124,3 +173,46 @@ def formula_similarity(a, b):
 def same_formula(a, b, n=12):
     ka, kb = [key(x) for x in a][:n], [key(x) for x in b][:n]
     return len(ka) >= 8 and ka == kb
+
+
+def kind_flags(an, kind):
+    """The extra label facts stored on a product, by kind. Cleansing agents only matter for cleansers."""
+    if not an:
+        return {}
+    out = {'acids': an['acids'], 'retinoids': an['retinoids'], 'benzoylPeroxide': an['benzoylPeroxide'],
+           'azelaic': an['azelaic'], 'vitaminC': an['vitaminC']}
+    if kind == 'cleanser':
+        out['surfactants'] = an['surfactants']
+    return out
+
+def notes(an, kind):
+    """Short, plain hints read from the ingredient list, aware of the product kind.
+
+    These are hints, never promises: amounts are not on the label, so an ingredient on the list says nothing
+    about how strong a product is. No medical claims; for anything that worries her, the app points to the huisarts.
+    """
+    if not an:
+        return []
+    out = []
+    acids, ret = an.get('acids') or [], an.get('retinoids') or []
+    leave_on = kind not in ('cleanser', 'mask')
+    if acids and ret:
+        out.append('Has exfoliating acids and a retinoid. Together they can irritate, so start slowly.')
+    elif acids:
+        out.append('Has exfoliating acids. With a retinoid in the same routine they can irritate.'
+                   + (' Use sunscreen by day.' if leave_on else ''))
+    elif ret:
+        out.append('Has a retinoid, which can irritate at first. Use sunscreen by day. Pregnant or breastfeeding? Ask your huisarts or pharmacist first.')
+    if an.get('benzoylPeroxide'):
+        out.append('Has benzoyl peroxide, which can dry the skin and bleach towels and pillowcases.')
+    if an.get('azelaic'):
+        out.append('Has azelaic acid, which can tingle at first.')
+    if 'Ascorbic acid' in (an.get('vitaminC') or []):
+        out.append('Has pure vitamin C (ascorbic acid), which can sting on sensitive skin.')
+    if kind == 'cleanser':
+        s = an.get('surfactants') or {}
+        if s.get('strong'):
+            out.append('Has a strong cleansing agent (' + s['strong'][0] + '), which can feel drying.')
+        elif s.get('mild'):
+            out.append('Its cleansing agents are of the milder kind.')
+    return out
