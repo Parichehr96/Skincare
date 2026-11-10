@@ -23,9 +23,13 @@ of other kinds can be scanned, found by name (the `find` route) and kept on a sh
 Not in the catalogue at all: body, hair and lip products, kids and baby lines, men-only lines, gift sets, refills
 and accessories.
 
-Shop data for the new kinds hasn't been collected yet (the current raw files are mostly sunscreens and day creams,
-plus the serums and night creams Douglas lists among its moisturisers). `data/products.json` therefore still holds the
-1,433 sunscreens and day creams; their `kind` was added by `scripts/add_kind.py`.
+The other kinds were read on 10 November 2026 from Kruidvat, Etos, HEMA and AH (`raw/skinpeers-all-*.json`). Douglas
+blocked the reader after part of its pages, so its night creams, serums, cleansers, masks and eye creams are only in
+the catalogue when Douglas listed them among its moisturisers earlier. In total: 2,974 products, of which 1,298 day
+creams and 163 sunscreens (the 1,433 from before plus 21 day creams and 7 sunscreens that weren't in it yet), and
+1,513 products of other kinds: 386 cleansers, 380 serums, 199 masks, 169 night creams, 139 eye creams, 95 toners,
+70 exfoliants and 75 others. Kruidvat partner shops don't publish ingredient lists, so about half of Kruidvat's
+products have none.
 
 ## What each product carries
 
@@ -72,6 +76,19 @@ has few reviews here.
 ```
 python3 scripts/build_catalog2.py data/products.json raw/*.json
 ```
+
+**The products already in the catalogue stay exactly as they are** (names, shops, label facts and ids, which reviews
+point at). The shop files only add products the catalogue doesn't have yet: a record whose shop page or EAN belongs to
+an existing product is skipped, a new product that shares a shop page with an existing one is left out, and so is a
+new day cream or sunscreen whose name nearly matches an existing one (same category, 80% of the name words). Only the
+"similar formulas" lists are worked out again for everything. To rebuild existing products from the shop files as
+well, run with `REFRESH_OLD=1` and check the differences by hand first: a few early products were merged with a
+sibling (a refill, another variant) and change name or lose their ingredient list when rebuilt.
+
+A product read from a menu other than the day cream and sunscreen menus (cleansers, acne care, Korean skincare ...)
+only becomes a day cream, and so gets peer recommendations, when its name says it is a face cream ("dagcrème",
+"moisturiser", "cream" ...). Spot treatments, purifying gels and lotions, jellies, refills and big tubs go on the shelf as
+"other"; body products, brushes and devices are left out.
 
 Raw records may come from any shop category (`cat` is the category they were read from: `sun`, `moist`, a kind such as
 `serum`, or anything else). Sunscreens and day creams pass exactly the same filters as before, so adding other kinds
