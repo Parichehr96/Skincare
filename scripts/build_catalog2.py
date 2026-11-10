@@ -2,15 +2,27 @@
 
 Input: one or more JSON files with raw records from the shop readers (Kruidvat, Etos, Douglas, ...).
 Each record: shop, url, name, brand, price, size, rating, ratingCount, ean, description/summary, ingredients, cat.
+`cat` in a raw record is the shop category it was read from: "sun", "moist", one of the kinds below, or anything else
+(then the name decides).
 
-Output keeps the old product ids where a shop URL matches, so existing (sample) reviews still link up.
+Every product gets a `kind` (sunscreen, day cream, night cream, eye cream, serum, cleanser, toner, mask, exfoliant,
+other) and a `cat`: "sun" and "moist" for the two kinds that get peer recommendations (sunscreen, day cream), and
+"other" for everything else. Sunscreens and day creams go through exactly the same filters as before, so that set
+doesn't change when other kinds are added. Body, hair, lip, kids/baby and men-only lines, gift sets, refills and
+accessories are left out.
+
+Output keeps the old product ids where a shop URL matches, so existing (sample) reviews still link up. The old
+products are read from data/products.json (or OLD_PRODUCTS=<path>).
 """
-import json, re, sys, hashlib, unicodedata, datetime, os
+import json, re, sys, hashlib, unicodedata, datetime, os, html
+from collections import Counter
 sys.path.insert(0, os.path.dirname(__file__))
-from inci import split_inci, analyse, formula_similarity, same_formula, key as ikey
+from inci import split_inci, analyse, formula_similarity, same_formula, key as ikey, kind_flags, notes as inci_notes
 
 TODAY = datetime.date.today().isoformat()
-OLD = json.load(open('/home/claude/sk2/data/products.json'))
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OLD_PATH = os.environ.get('OLD_PRODUCTS') or os.path.join(REPO, 'data', 'products.json')
+OLD = json.load(open(OLD_PATH)) if os.path.exists(OLD_PATH) else []
 OLD_BY_URL = {}
 for p in OLD:
     for s in p['shops']:
@@ -42,6 +54,17 @@ FACE = re.compile(r'gezicht|face|facial|fluid|flu[iï]de|gelaat|visage|sun (crea
 DOUGLAS_KEEP = {'gezichtscrème': 'moist', 'gezichtsgel': 'moist', 'gezichtslotion': 'moist', 'gezichtsemulsie': 'moist', 'dagcrème': 'moist',
                 'gezichtsbalsem': 'moist', 'gezichtsfluide': 'moist', 'getinte dagcrème': 'moist', 'bb cream': 'moist',
                 'zonnebrandcrème voor het gezicht': 'sun'}
+# Douglas ends its names with the product type. These suffixes name the other kinds.
+DOUGLAS_OTHER = {'nachtcrème': 'night cream', 'nachtcreme': 'night cream', 'oogcrème': 'eye cream', 'oogcreme': 'eye cream',
+                 'ooggel': 'eye cream', 'oogserum': 'eye cream', 'oogbalsem': 'eye cream', 'serum': 'serum', 'gezichtsserum': 'serum',
+                 'essence': 'serum', 'ampullen': 'serum', 'reinigingsgel': 'cleanser', 'reinigingsschuim': 'cleanser',
+                 'gezichtsreinigingsschuim': 'cleanser', 'reinigingsmelk': 'cleanser', 'reinigingsolie': 'cleanser',
+                 'reinigingsbalsem': 'cleanser', 'reinigingscrème': 'cleanser', 'reinigingslotion': 'cleanser', 'gezichtsreiniger': 'cleanser',
+                 'micellair water': 'cleanser', 'make-up remover': 'cleanser', 'toner': 'toner', 'gezichtstoner': 'toner',
+                 'gezichtstonic': 'toner', 'gezichtswater': 'toner', 'gezichtsspray': 'toner', 'gezichtsmasker': 'mask', 'masker': 'mask',
+                 'slaapmasker': 'mask', 'sheet mask': 'mask', 'oogmasker': 'mask', 'peeling': 'exfoliant', 'gezichtspeeling': 'exfoliant',
+                 'gezichtsscrub': 'exfoliant', 'exfoliant': 'exfoliant', 'gezichtsolie': 'other'}
+
 def douglas_fix(r):
     if r['shop'] != 'Douglas':
         return r
@@ -52,6 +75,14 @@ def douglas_fix(r):
             r['name'] = n[: -len(suf)].strip()
             if DOUGLAS_KEEP[suf] == 'sun' or r['cat'] == 'sun':
                 r['cat'] = 'sun' if DOUGLAS_KEEP[suf] == 'sun' or re.search(r'spf|lsf', n, re.I) else r['cat']
+            return r
+    for suf in sorted(DOUGLAS_OTHER, key=len, reverse=True):
+        if n.lower().endswith(' ' + suf):
+            r = dict(r)
+            r['name'] = n[: -len(suf)].strip()
+            r['kindHint'] = DOUGLAS_OTHER[suf]
+            if r.get('cat') in ('sun', 'moist'):
+                r['cat'] = 'other'
             return r
     return None
 
@@ -79,6 +110,75 @@ def keep(r):
     if re.search(r'\b(oog|eye|nacht|night|men|mannen|homme|kids?|baby|lip)\b', n, re.I):
         return False
     return True
+
+KINDS = ['sunscreen', 'day cream', 'night cream', 'eye cream', 'serum', 'cleanser', 'toner', 'mask', 'exfoliant', 'other']
+REC_KIND = {'sun': 'sunscreen', 'moist': 'day cream'}
+# Raw shop categories that already say the kind (Dutch and English shop menu names).
+CAT_HINT = {'sun': 'sunscreen', 'moist': 'day cream', 'sunscreen': 'sunscreen', 'day cream': 'day cream', 'dagcreme': 'day cream',
+            'night cream': 'night cream', 'night': 'night cream', 'nachtcreme': 'night cream', 'eye cream': 'eye cream', 'eye': 'eye cream',
+            'oogcreme': 'eye cream', 'oogverzorging': 'eye cream', 'serum': 'serum', 'serums': 'serum', 'cleanser': 'cleanser',
+            'cleansers': 'cleanser', 'reiniging': 'cleanser', 'gezichtsreiniging': 'cleanser', 'toner': 'toner', 'toners': 'toner',
+            'mask': 'mask', 'masks': 'mask', 'masker': 'mask', 'maskers': 'mask', 'gezichtsmaskers': 'mask', 'exfoliant': 'exfoliant',
+            'exfoliants': 'exfoliant', 'peeling': 'exfoliant', 'scrub': 'exfoliant'}
+# Never in the catalogue, whatever the shop category: not for the face, not for her, or not a product on its own.
+EXCLUDE_ALWAYS = re.compile(
+    r'\b(body|lichaam\w*|bodylotion|douche\w*|shower|hair|haar\w*|hoofdhuid\w*|scalp|shampoo|conditioner|lip|lips|lippen|lipbalm|'
+    r'lippenbalsem|kids?|kinder\w*|baby|babies|junior|men|mannen|man|for men|homme|baard\w*|beard|scheer\w*|shave|shaving|aftershave|'
+    r'gift ?set|giftset|cadeau\w*|geschenk\w*|set|kit|duo|trio|coffret|verzorgingsset|reisset|adventskal\w*|navulling|navul\w*|refill|'
+    r'sample|proefje|mini kit|accessoire\w*|borstel|brush|kwast|spons|sponge|wattenschijf\w*|cotton|katoen|applicator|device|apparaat|'
+    r'roller|gua sha|haarband|headband|kussensloop|pillow\w*|handzeep|hand|handcreme|voet\w*|foot|feet|nagel\w*|deodorant|tandpasta|'
+    r'foundation|concealer|primer|mascara|bronzer|blush|poeder|powder|highlighter|setting spray|lipstick|aftersun|after sun|zelfbruin\w*|'
+    r'self.?tan|parfum|eau de toilette|eau de parfum|zijden|silk pillow)\b', re.I)
+
+def kind_of(name, hint=None):
+    """The kind of face product, from its name (Dutch, English and French words); the shop category is the fallback."""
+    n = unicodedata.normalize('NFD', html.unescape(name or '')).encode('ascii', 'ignore').decode().lower()
+    has = lambda rx: re.search(rx, n)
+    if has(r'\b(oog|ogen|eye|eyes|yeux|augen)|oogcr|ooggel|oogserum|oogcontour|oogbalsem|eye ?contour'):
+        return 'mask' if has(r'mask|masker|patch|pads?\b') else 'eye cream'
+    if has(r'reinig|cleans|\bwash|wasgel|face ?wash|micell|make.?up ?(remover|verwijder)|afschmink|demaquill|reinigingsschuim|\bfoam\b'):
+        return 'cleanser'
+    if has(r'peeling|scrub|exfoli|gommage|\b(aha|bha|pha)\b|resurfac'):
+        return 'exfoliant'
+    if has(r'masker|\bmasks?\b|sheet ?mask|slaapmasker|sleeping ?mask|overnight ?mask'):
+        return 'mask'
+    if has(r'\btoner|\btonic|tonique|gezichtswater|toning|face ?mist|gezichtsspray|\bmist\b'):
+        return 'toner'
+    if has(r'serum|\bampoule|\bampul|booster|concentra|\bessence|druppels|\bdrops\b'):
+        return 'serum'
+    if has(r'dag ?(en|&) ?nacht|day ?(and|&) ?night'):
+        return 'day cream'
+    if has(r'nacht|night|\bnuit|sleep|slaap'):
+        return 'night cream'
+    if has(r'zonnebrand|zonnecr|zonnefluid|zonnebalsem|sunscreen|sun ?(cream|fluid|aqua|serum|essence|gel|milk|lotion)|\buv\b') and not has(r'dagcr|day ?cream'):
+        return 'sunscreen'
+    if has(r'\b(spf|lsf)\s?\d') and hint == 'sunscreen':
+        return 'sunscreen'
+    if has(r'gezichtsolie|face ?oil|facial ?oil|\b(olie|oil)\b') and not has(r'oil.?(free|control)|olievrij'):
+        return 'other'
+    if has(r'dagcr|day ?cream|gezichtscr|moistur|hydrat|\bcreme|\bcream|gel|fluid|lotion|emuls|balm|balsem|\b(bb|cc)\b'):
+        return hint if hint in ('night cream', 'eye cream') else 'day cream'
+    return hint if hint in KINDS else 'other'
+
+def classify(r):
+    """Return the record with its `kind` and `cat` set, or None to leave it out."""
+    if r.get('cat') in ('sun', 'moist') and keep(r):
+        return {**r, 'kind': REC_KIND[r['cat']]}
+    n = r.get('name') or ''
+    if EXCLUDE_ALWAYS.search(n):
+        return None
+    if r.get('kindHint'):
+        # a Douglas name suffix names the kind exactly ("... Reinigingsgel"), even when the rest sounds like a cream
+        return {**r, 'cat': 'other', 'kind': r['kindHint']}
+    hint = CAT_HINT.get(norm(r.get('cat')))
+    k = kind_of(n, hint)
+    if k in ('sunscreen', 'day cream'):
+        # sunscreens and day creams only come in through the old filters, so that set stays the same
+        if r.get('cat') in ('sun', 'moist'):
+            return None
+        r2 = {**r, 'cat': 'sun' if k == 'sunscreen' else 'moist'}
+        return {**r2, 'kind': k} if keep(r2) else None
+    return {**r, 'cat': 'other', 'kind': k}
 
 CLAIMS = [
     (r'parfumvrij|zonder parfum|fragrance[- ]free|parfum[- ]free|ongeparfumeerd|sans parfum', 'Fragrance-free'),
@@ -136,6 +236,10 @@ def shape_of(name, cat):
     if re.search(r'pot|jar|creme|crème|cream|balm|balsem|gel', n) and cat == 'moist': return 'jar'
     return 'tube'
 
+def family(r):
+    """Sunscreens and day creams may merge with each other (as before); every other kind stays apart."""
+    return 'rec' if r.get('kind') in ('sunscreen', 'day cream') else r.get('kind') or 'other'
+
 def group_key(r):
     if r.get('ean'):
         return 'ean:' + r['ean']
@@ -148,30 +252,31 @@ def main(paths):
     raw = []
     for p in paths:
         raw += json.load(open(p))
-    raw = [r for r in raw if r.get('name') and r.get('cat') in ('sun', 'moist') and 'access denied' not in r['name'].lower()]
+    raw = [r for r in raw if r.get('name') and 'access denied' not in r['name'].lower()]
     raw = [x for x in (douglas_fix(r) for r in raw) if x]
-    kept = [r for r in raw if keep(r)]
+    kept = [x for x in (classify(r) for r in raw) if x]
     groups = {}
     for r in kept:
         o = OLD_BY_URL.get((r.get('url') or '').split('?')[0].rstrip('/'))
-        groups.setdefault('old:' + o['id'] if o else group_key(r), []).append(r)
+        groups.setdefault('old:' + o['id'] if o else family(r) + '|' + group_key(r), []).append(r)
     # join groups that share any EAN (one product can carry several)
     owner = {}
     for k in list(groups):
         if k not in groups: continue
-        eans = {e.strip() for r in groups[k] for e in str(r.get('ean') or '').split(',') if e.strip()}
+        fam = family(groups[k][0])
+        eans = {fam + ':' + e.strip() for r in groups[k] for e in str(r.get('ean') or '').split(',') if e.strip()}
         target = next((owner[e] for e in eans if e in owner and owner[e] in groups and owner[e] != k), None)
         if target:
             keep_k, drop_k = (k, target) if k.startswith('old:') and not target.startswith('old:') else (target, k)
             groups[keep_k] += groups.pop(drop_k)
-            for e2 in eans | {e.strip() for r in groups[keep_k] for e in str(r.get('ean') or '').split(',') if e.strip()}:
+            for e2 in eans | {fam + ':' + e.strip() for r in groups[keep_k] for e in str(r.get('ean') or '').split(',') if e.strip()}:
                 owner[e2] = keep_k
         else:
             for e in eans: owner[e] = k
     # a second pass joins groups that share a normalised name across shops (EANs differ per shop sometimes)
     byname = {}
     for k, rs in list(groups.items()):
-        nk = group_key({**rs[0], 'ean': None})
+        nk = family(rs[0]) + '|' + group_key({**rs[0], 'ean': None})
         if nk in byname and nk != k:
             groups[byname[nk]] += rs
             del groups[k]
@@ -193,7 +298,7 @@ def main(paths):
         r0 = groups[k][0]
         allt = set().union(*[toks(r) for r in groups[k]])
         inci = next((split_inci(r.get('ingredients'))[:15] for r in groups[k] if r.get('ingredients')), [])
-        info[k] = (bkey(r0), parse_spf(r0.get('name') or ''), allt, [ikey(x) for x in inci])
+        info[k] = (bkey(r0) + '|' + family(r0), parse_spf(r0.get('name') or ''), allt, [ikey(x) for x in inci])
     byb = {}
     for k in keys:
         byb.setdefault(info[k][0], []).append(k)
@@ -202,7 +307,7 @@ def main(paths):
         while k in merged: k = merged[k]
         return k
     for b_, ks in byb.items():
-        if not b_: continue
+        if not b_ or b_.startswith('|'): continue
         for i in range(len(ks)):
             for j in range(i + 1, len(ks)):
                 a1, a2 = root(ks[i]), root(ks[j])
@@ -220,10 +325,15 @@ def main(paths):
     for k, rs in groups.items():
         rs.sort(key=lambda r: (-(len(r.get('ingredients') or '')), r['shop']))
         best = rs[0]
-        cat = 'sun' if any(r['cat'] == 'sun' for r in rs) else 'moist'
         name = re.sub(r'\s+', ' ', best['name']).strip()
-        if cat == 'sun' and re.search(r'dagcr|day cream|gezichtscr', name, re.I):
-            cat = 'moist'
+        if family(rs[0]) == 'rec':
+            cat = 'sun' if any(r['cat'] == 'sun' for r in rs) else 'moist'
+            if cat == 'sun' and re.search(r'dagcr|day cream|gezichtscr', name, re.I):
+                cat = 'moist'
+            kind = REC_KIND[cat]
+        else:
+            cat = 'other'
+            kind = Counter(r['kind'] for r in rs).most_common(1)[0][0]
         inci_text = best.get('ingredients')
         inci = split_inci(inci_text)
         an = analyse(inci) if len(inci) >= 5 else None
@@ -258,6 +368,7 @@ def main(paths):
             'retinol': an['retinol'] if an else None,
             'poreClogging': [x['name'] for x in an['poreClogging']] if an else None,
         }
+        flags.update(kind_flags(an, kind))
         if old:
             # keep the hand-checked values where the label gives nothing
             for f in ('filters', 'tinted', 'fragrance', 'dryingAlcohol', 'retinol'):
@@ -269,7 +380,7 @@ def main(paths):
             tr = {**tr, **{k: v for k, v in old['traits'].items() if v}}
         prices = [s['price'] for s in shops if s['price'] is not None]
         prods.append({
-            'id': pid, 'name': name, 'brand': brand, 'cat': cat,
+            'id': pid, 'name': name, 'brand': brand, 'cat': cat, 'kind': kind,
             'size': parse_size(best.get('size'), name) or (old or {}).get('size'),
             'price': min(prices) if prices else None,
             'shops': shops, 'spf': spf, 'flags': flags, 'traits': tr,
@@ -279,6 +390,7 @@ def main(paths):
             'ingredientsSource': {'shop': best['shop'], 'url': best['url'], 'date': TODAY} if inci else None,
             'actives': [a['label'] for a in (an or {}).get('actives', [])][:6],
             'claims': cl,
+            'hints': inci_notes(an, kind),
             'external': external,
             'ean': next((str(r['ean']).split(',')[0] for r in rs if r.get('ean')), None),
         })
@@ -286,11 +398,11 @@ def main(paths):
     have = {p['id'] for p in prods}
     for o in OLD:
         if o['id'] not in have:
-            prods.append({**o, 'ingredients': None, 'ingredientsSource': None, 'actives': [], 'claims': [], 'external': [], 'ean': None,
-                          'flags': {**o['flags'], 'poreClogging': None}})
-    # similar formulas, within the same category
-    for cat in ('sun', 'moist'):
-        ps = [p for p in prods if p['cat'] == cat and p['ingredients']]
+            prods.append({**o, 'kind': o.get('kind') or REC_KIND.get(o['cat'], 'other'), 'ingredients': None, 'ingredientsSource': None,
+                          'actives': [], 'claims': [], 'hints': [], 'external': [], 'ean': None, 'flags': {**o['flags'], 'poreClogging': None}})
+    # similar formulas, only between products of the same kind
+    for kind in KINDS:
+        ps = [p for p in prods if p['kind'] == kind and p['ingredients']]
         for p in ps:
             sims = []
             for q in ps:
@@ -303,13 +415,12 @@ def main(paths):
             p['similar'] = sims[:6]
     for p in prods:
         p.setdefault('similar', [])
-    prods.sort(key=lambda p: (p['cat'], p['brand'].lower(), p['name'].lower()))
+    prods.sort(key=lambda p: ({'moist': 0, 'other': 1, 'sun': 2}[p['cat']], p['brand'].lower(), p['name'].lower()))
     return prods
 
 if __name__ == '__main__':
     out = sys.argv[1]
     prods = main(sys.argv[2:])
     json.dump(json.loads(json.dumps(prods, ensure_ascii=False).replace('\ufffd', '')), open(out, 'w'), ensure_ascii=False, separators=(',', ':'))
-    from collections import Counter
-    print(len(prods), Counter(p['cat'] for p in prods), 'with INCI', sum(1 for p in prods if p['ingredients']),
+    print(len(prods), Counter(p['cat'] for p in prods), Counter(p['kind'] for p in prods), 'with INCI', sum(1 for p in prods if p['ingredients']),
           'with similar', sum(1 for p in prods if p['similar']), 'multi-shop', sum(1 for p in prods if len(p['shops']) > 1))
