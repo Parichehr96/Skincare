@@ -1,0 +1,272 @@
+[
+ {
+  "id": "test-other-glow-serum",
+  "name": "Testmerk Glow Serum AHA + Retinol",
+  "brand": "Testmerk",
+  "cat": "other",
+  "kind": "serum",
+  "size": "30 ml",
+  "price": 14.99,
+  "shops": [
+   {
+    "shop": "Kruidvat",
+    "price": 14.99,
+    "url": "https://example.invalid/test-other-glow-serum",
+    "online": true
+   }
+  ],
+  "spf": null,
+  "flags": {
+   "filters": null,
+   "tinted": false,
+   "fragrance": true,
+   "dryingAlcohol": false,
+   "retinol": true,
+   "poreClogging": [],
+   "acids": [
+    "Glycolic acid"
+   ],
+   "retinoids": [
+    "Retinol"
+   ],
+   "benzoylPeroxide": false,
+   "azelaic": [],
+   "vitaminC": []
+  },
+  "traits": {
+   "light": true,
+   "rich": false,
+   "sensitive": false,
+   "blemish": false,
+   "korean": false
+  },
+  "note": "Synthetic test product. Never in data/products.json.",
+  "shape": "pump",
+  "c": [
+   "#EEF1F6",
+   "#4E6A8E"
+  ],
+  "checked": "2026-11-10",
+  "ingredients": [
+   "Aqua",
+   "Glycerin",
+   "Glycolic Acid",
+   "Sodium Hydroxide",
+   "Propanediol",
+   "Niacinamide",
+   "Retinol",
+   "Sodium Hyaluronate",
+   "Panthenol",
+   "Xanthan Gum",
+   "Phenoxyethanol",
+   "Parfum",
+   "Linalool"
+  ],
+  "ingredientsSource": {
+   "shop": "Kruidvat",
+   "url": "https://example.invalid/test-other-glow-serum",
+   "date": "2026-11-10"
+  },
+  "actives": [
+   "Glycerin",
+   "Glycolic acid (AHA)",
+   "Niacinamide",
+   "Hyaluronic acid",
+   "Panthenol"
+  ],
+  "claims": [
+   "Vegan"
+  ],
+  "hints": [
+   "Has exfoliating acids and a retinoid. Together they can irritate, so start slowly."
+  ],
+  "external": [
+   {
+    "source": "Kruidvat",
+    "rating": 4.2,
+    "n": 37,
+    "scale": 5,
+    "date": "2026-11-10",
+    "url": "https://example.invalid/test-other-glow-serum"
+   }
+  ],
+  "ean": null,
+  "similar": [
+   {
+    "id": "test-other-glow-serum-light",
+    "s": 0.78,
+    "same": false
+   }
+  ]
+ },
+ {
+  "id": "test-other-glow-serum-light",
+  "name": "Testmerk Glow Serum Light",
+  "brand": "Testmerk",
+  "cat": "other",
+  "kind": "serum",
+  "size": "30 ml",
+  "price": 12.99,
+  "shops": [
+   {
+    "shop": "Kruidvat",
+    "price": 12.99,
+    "url": "https://example.invalid/test-other-glow-serum-light",
+    "online": true
+   }
+  ],
+  "spf": null,
+  "flags": {
+   "filters": null,
+   "tinted": false,
+   "fragrance": false,
+   "dryingAlcohol": false,
+   "retinol": false,
+   "poreClogging": [],
+   "acids": [
+    "Glycolic acid"
+   ],
+   "retinoids": [],
+   "benzoylPeroxide": false,
+   "azelaic": [],
+   "vitaminC": []
+  },
+  "traits": {
+   "light": true,
+   "rich": false,
+   "sensitive": false,
+   "blemish": false,
+   "korean": false
+  },
+  "note": "Synthetic test product. Never in data/products.json.",
+  "shape": "pump",
+  "c": [
+   "#EEF1F6",
+   "#4E6A8E"
+  ],
+  "checked": "2026-11-10",
+  "ingredients": [
+   "Aqua",
+   "Glycerin",
+   "Glycolic Acid",
+   "Sodium Hydroxide",
+   "Propanediol",
+   "Niacinamide",
+   "Sodium Hyaluronate",
+   "Panthenol",
+   "Allantoin",
+   "Xanthan Gum",
+   "Phenoxyethanol"
+  ],
+  "ingredientsSource": {
+   "shop": "Kruidvat",
+   "url": "https://example.invalid/test-other-glow-serum-light",
+   "date": "2026-11-10"
+  },
+  "actives": [
+   "Glycerin",
+   "Glycolic acid (AHA)",
+   "Niacinamide",
+   "Hyaluronic acid",
+   "Panthenol",
+   "Allantoin"
+  ],
+  "claims": [],
+  "hints": [
+   "Has exfoliating acids. With a retinoid in the same routine they can irritate. Use sunscreen by day."
+  ],
+  "external": [],
+  "ean": null,
+  "similar": [
+   {
+    "id": "test-other-glow-serum",
+    "s": 0.78,
+    "same": false
+   }
+  ]
+ },
+ {
+  "id": "test-other-clear-cleanser",
+  "name": "Testmerk Clear Reinigingsgel",
+  "brand": "Testmerk",
+  "cat": "other",
+  "kind": "cleanser",
+  "size": "30 ml",
+  "price": 6.49,
+  "shops": [
+   {
+    "shop": "Kruidvat",
+    "price": 6.49,
+    "url": "https://example.invalid/test-other-clear-cleanser",
+    "online": true
+   }
+  ],
+  "spf": null,
+  "flags": {
+   "filters": null,
+   "tinted": false,
+   "fragrance": false,
+   "dryingAlcohol": false,
+   "retinol": false,
+   "poreClogging": [],
+   "acids": [
+    "Salicylic acid"
+   ],
+   "retinoids": [],
+   "benzoylPeroxide": false,
+   "azelaic": [],
+   "vitaminC": [],
+   "surfactants": {
+    "strong": [
+     "Sodium laureth sulfate"
+    ],
+    "mild": [
+     "Cocamidopropyl betaine"
+    ]
+   }
+  },
+  "traits": {
+   "light": true,
+   "rich": false,
+   "sensitive": false,
+   "blemish": false,
+   "korean": false
+  },
+  "note": "Synthetic test product. Never in data/products.json.",
+  "shape": "pump",
+  "c": [
+   "#EEF1F6",
+   "#4E6A8E"
+  ],
+  "checked": "2026-11-10",
+  "ingredients": [
+   "Aqua",
+   "Sodium Laureth Sulfate",
+   "Cocamidopropyl Betaine",
+   "Glycerin",
+   "Salicylic Acid",
+   "Sodium Chloride",
+   "Citric Acid",
+   "Phenoxyethanol"
+  ],
+  "ingredientsSource": {
+   "shop": "Kruidvat",
+   "url": "https://example.invalid/test-other-clear-cleanser",
+   "date": "2026-11-10"
+  },
+  "actives": [
+   "Glycerin",
+   "Salicylic acid (BHA)"
+  ],
+  "claims": [
+   "For blemish-prone skin"
+  ],
+  "hints": [
+   "Has exfoliating acids. With a retinoid in the same routine they can irritate.",
+   "Has a strong cleansing agent (Sodium laureth sulfate), which can feel drying."
+  ],
+  "external": [],
+  "ean": null,
+  "similar": []
+ }
+]

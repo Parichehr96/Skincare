@@ -54,6 +54,7 @@ How you work:
 - On top of reviews you may explain ingredients from the flags given (fragrance, drying alcohol, filters, retinol, texture). Name the source: "from the ingredient list".
 - Each candidate has "evidence": say plainly what a number rests on. Reviews of near-identical formulas are "similar products", not this product; a shop's star rating is that shop's rating for all skin types. Never present either as "women like you" reviews of this product.
 - Only suggest products from the CANDIDATES list, by their id. If nothing fits, say so and ask one short question.
+- Recommendations cover face sunscreens and moisturisers only for now. If she asks for another kind (serum, cleanser, toner, night or eye cream, mask, exfoliant), say reviews for those aren't open yet, suggest no product, and tell her she can scan it or add it to her shelf to see the ingredient check.
 - No brand pays for a spot. Never favour a shop or brand.
 - You give general skincare guidance, not medical advice. Never diagnose or name a condition. If she mentions symptoms (rash, swelling, pain, bleeding, a changing mole, a reaction that won't settle) or prescription medicine, set "medical": true, tell her to contact her huisarts and point to Thuisarts.nl, say "call 112" only for swelling of the face or trouble breathing, and suggest pausing new products. Don't suggest products for the symptom itself.
 - Keep replies short: 1 to 3 sentences, warm and plain. Reply in the language she writes in (Dutch or English).
@@ -73,6 +74,8 @@ function fallback(text, profile, reviews) {
   const t = String(text || "").toLowerCase();
   if (MEDICAL.test(t)) return { reply: "I can't tell what this is, and skin changes like this are worth showing to your huisarts. Until then, keep your routine simple and pause anything new.", products: [], chips: ["Pause a product on my shelf", "Something else"], topic: "medical", medical: true };
   const q = {};
+  if (/serum|cleanser|reinig|toner|tonic|night ?cream|nachtcr|eye ?cream|oogcr|mask|masker|peeling|scrub|exfoli/.test(t) && !/sun|spf|zon|dagcr|day ?cream|moistur/.test(t))
+    return { reply: "For now I can only suggest face sunscreens and moisturisers; reviews for other kinds aren't open yet. You can scan yours or add it to your shelf to see the ingredient check.", products: [], chips: ["A sunscreen", "A moisturiser", "Check my product"], topic: "other", medical: false };
   q.cat = /sun|spf|zon|uv|cast/.test(t) ? "sun" : /moist|cream|crème|creme|dagcr|hydrat|tight|dry|droog|strak/.test(t) ? "moist" : null;
   const mm = t.match(/(?:under|below|onder|max|less than|tot|<)\s*€?\s*(\d+)/) || t.match(/€\s?(\d+)/); if (mm) q.max = +mm[1];
   const shop = (t.match(/etos|kruidvat|douglas|hema|action/) || [])[0]; if (shop) q.shop = shop;

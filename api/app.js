@@ -45,7 +45,7 @@ function cleanShelf(items) {
     if (!pid || seen.has(pid)) continue;
     seen.add(pid);
     out.push({ pid, status: it.status === "stopped" ? "stopped" : "using", since: typeof it.since === "string" ? it.since.slice(0, 30) : new Date().toISOString(),
-      reason: it.reason ? String(it.reason).slice(0, 60) : null, name: custom ? String(it.name || pid).slice(0, 120) : undefined, cat: custom ? (it.cat === "sun" ? "sun" : "moist") : undefined,
+      reason: it.reason ? String(it.reason).slice(0, 60) : null, name: custom ? String(it.name || pid).slice(0, 120) : undefined, cat: custom ? (["sun", "moist", "other"].includes(it.cat) ? it.cat : "moist") : undefined,
       reviewed: { early: !!(it.reviewed && it.reviewed.early), late: !!(it.reviewed && it.reviewed.late) } });
   }
   return out;
@@ -133,6 +133,14 @@ module.exports = async (req, res) => {
       const list = engine.rank(all, user.profile, { cat: pick(q.cat, ["sun", "moist"]), max: q.max ? Number(q.max) : null, shop: q.shop || null, ff: q.ff === "1", spf: q.spf === "1", light: q.light === "1", nocast: q.nocast === "1", nobreak: q.nobreak === "1", q: q.q ? String(q.q).slice(0, 60) : null });
       return sendJSON(res, 200, { products: list.slice(0, Number(q.limit) || 60), count: list.length });
     }
+    // Every kind of product, for scanning, search by name and the shelf. Not a ranking; Matches uses "products".
+    if (r === "find" && m === "GET") {
+      const { all } = await reviewsFor();
+      const q = req.query;
+      const ids = q.ids ? String(q.ids).split(",").map((x) => x.trim()).filter(Boolean).slice(0, 100) : null;
+      const list = engine.search(all, user.profile, ids ? { ids } : { q: String(q.q || "").slice(0, 60) });
+      return sendJSON(res, 200, { products: list.slice(0, Math.min(100, Number(q.limit) || 20)), count: list.length });
+    }
     if (r === "product" && m === "GET") {
       const { all } = await reviewsFor();
       const d = engine.detail(all, user.profile, String(req.query.id || ""), user.unlocked);
@@ -144,6 +152,8 @@ module.exports = async (req, res) => {
       const b = body(req);
       const pid = String(b.pid || "");
       if (!engine.BY_ID[pid]) return sendJSON(res, 400, { error: "unknown_product" });
+      // Reviews are open only for sunscreens and day creams for now; other kinds are shelf-only.
+      if (!engine.isOpen(engine.BY_ID[pid])) return sendJSON(res, 400, { error: "reviews_not_open", kind: engine.kindOf(engine.BY_ID[pid]) });
       if (!user.profile) return sendJSON(res, 400, { error: "no_profile" });
       const a = pick(b.again, ["y", "m", "n"]); if (!a) return sendJSON(res, 400, { error: "bad_review" });
       const s = b.stage === "late" ? "l" : "e";
