@@ -1,3 +1,4 @@
+// Ignores two console errors the test causes itself: blocked font requests (ERR_FAILED) and the serum review it sends to check the 400 refusal.
 // Drives the app at http://localhost:8890 (start tools/apptest/server.js first). Screenshots land next to this file.
 const {chromium}=require('playwright');const fs=require('fs'),path=require('path');
 const PHOTO=process.env.PHOTO||path.join(__dirname,'photo.png');
@@ -67,4 +68,4 @@ await p.waitForTimeout(600);
 const ap=await ctx.newPage();ap.on('pageerror',e=>errs.push('ADMIN '+e.message));await ap.route('**/fonts.g*/**',r=>r.abort());
 await ap.goto('http://localhost:8890/app/admin.html');await ap.fill('#k','admin-key-1234567890abc');await ap.click('.gate button');await ap.waitForTimeout(1200);await ap.screenshot({path:__dirname+'/21-admin.png',fullPage:true});
 await c('[data-a=delacct]',600);await c('[data-a=delconfirm]',1500);await shot('22-after-delete');
-console.log('ERRORS',JSON.stringify(errs,null,1));console.log(fails.length?fails.length+' checks failed':'all checks passed');await b.close();process.exit(fails.length||errs.length?1:0);})();
+const EXPECTED=[/net::ERR_FAILED/,/status of 400/];const real=errs.filter(e=>!EXPECTED.some(r=>r.test(e)));console.log('ERRORS',JSON.stringify(real,null,1));console.log(fails.length?fails.length+' checks failed':'all checks passed');await b.close();process.exit(fails.length||real.length?1:0);})();
