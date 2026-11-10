@@ -35,6 +35,14 @@ const ageLabel=a=>String(a||'').replace('-','–');
 const prof=()=>S.user&&S.user.profile;
 const groupLabel=()=>{const p=prof();return p?`${TYPE_NAME[p.type]||''}, ${ageLabel(p.age)}`:'';};
 const onShelf=pid=>S.shelf.find(x=>x.pid===pid);
+/* Kinds. Reviews, Matches and the chat's picks cover sunscreens and moisturisers (cat sun/moist) for now; every other
+   kind (cat other) can sit on a shelf and gets the ingredient check, the brand's claims and shop ratings. */
+const KIND_PLURAL={'night cream':'night creams','eye cream':'eye creams',serum:'serums',cleanser:'cleansers',toner:'toners',mask:'masks',exfoliant:'exfoliants'};
+const shelfOnly=p=>!!p&&p.cat==='other';
+const reviewable=p=>!!p&&!p.custom&&!shelfOnly(p);
+const kindLabel=p=>p.cat==='sun'?'sunscreen':p.cat==='moist'?'moisturiser':(p.kind&&p.kind!=='other'?p.kind:'face care');
+const cap=t=>t?t[0].toUpperCase()+t.slice(1):'';
+const notOpenLine=p=>`Reviews for ${KIND_PLURAL[p.kind]||'these products'} aren't open yet. You can keep it on your shelf.`;
 
 /* ---------- Pieces ---------- */
 function art(p,w=60,h=72){
@@ -53,6 +61,7 @@ function dots(yes,total,{size=8,play=false,max=24}={}){
 }
 function peerLine(p){
  const b=p.basis;
+ if(shelfOnly(p)) return `<span class="ppeer low">${esc(cap(kindLabel(p)))} · reviews not open yet${p.hasIngredients?' · ingredient check':''}</span>`;
  if(p.peer&&p.peer.n>=5) return `<span class="ppeer">${dots(p.peer.yes,p.peer.n,{size:7})}<span>${p.peer.yes} of ${p.peer.n} women like you would buy again</span><span class="ptotal">${p.all.n} reviews in total</span></span>`;
  if(p.all&&p.all.n>=5) return `<span class="ppeer low">${p.peer&&p.peer.n?`Only ${p.peer.n} from women like you yet · `:''}${p.all.yes} of ${p.all.n} reviewers would buy again</span>`;
  if((b==='similar'||b==='similar-all')&&p.similar){const s=b==='similar'?p.similar.peer:p.similar.all;return `<span class="ppeer low"><span class="srcchip">Similar formula</span>${s.yes} of ${s.n} ${b==='similar'?'women like you':'reviewers'} would buy ${p.similar.k>1?'these':'it'} again</span>`;}
