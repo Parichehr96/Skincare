@@ -50,21 +50,26 @@ const notOpenLine=p=>`Reviews for ${KIND_PLURAL[p.kind]||'these products'} aren'
 const photoKey=()=>'sp-photos-'+(S.user?S.user.id:'x');
 const myPhotos=()=>store.get(photoKey())||{};
 function setMyPhoto(pid,dataUrl){const m=myPhotos();if(dataUrl)m[pid]=dataUrl;else delete m[pid];store.set(photoKey(),m);}
+/* Returns what to show for a product: her own shelf photo, or the shop's full-size pack photo with a tiny built-in
+   thumbnail as the instant placeholder and fallback. The full photo is always the main image, so cards and the
+   product page are sharp; the thumbnail only shows while it loads, or if it can't load at all. */
 function photoOf(p,own){
  if(!p||!p.id)return null;
- const mine=own&&myPhotos()[p.id]; if(mine)return {src:mine,own:true};
+ const mine=own&&myPhotos()[p.id]; if(mine)return {main:mine,own:true};
  const th=window.SP_THUMBS&&window.SP_THUMBS[p.id];
- if(th)return {src:th};
- return p.image?{src:p.image}:null;
+ if(p.image)return {main:p.image,ph:th||null};
+ if(th)return {main:th};
+ return null;
 }
 document.addEventListener('error',e=>{const t=e.target;if(!t||!t.classList||!t.classList.contains('pphoto'))return;
- if(t.dataset.fb&&t.src!==t.dataset.fb){const f=t.dataset.fb;delete t.dataset.fb;t.src=f;return;}
- t.hidden=true;const s=t.nextElementSibling;if(s)s.removeAttribute('hidden');const box=t.parentElement;if(box){box.classList.remove('hasphoto');}},true);
+ const fb=t.getAttribute('data-fb');
+ if(fb&&t.src!==fb){t.removeAttribute('data-fb');t.src=fb;return;}   // full photo failed: drop to the thumbnail
+ t.hidden=true;const s=t.nextElementSibling;if(s)s.removeAttribute('hidden');const box=t.parentElement;if(box)box.classList.remove('hasphoto');},true);
 function art(p,w=60,h=72,{own=false,large=false}={}){
  const ph=photoOf(p,own);
- if(ph){const big=large&&!ph.own&&p.image&&p.image!==ph.src;
-  return `<img class="pphoto" src="${esc(big?p.image:ph.src)}"${big?` data-fb="${esc(ph.src)}"`:''} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">${artSvg(p,w,h,true)}`;}
- return artSvg(p,w,h,false);
+ if(!ph)return artSvg(p,w,h,false);
+ const bg=ph.ph?` style="background-image:url(${esc(ph.ph)})"`:'';   // blurred thumbnail behind, until the full photo arrives
+ return `<img class="pphoto"${bg} src="${esc(ph.main)}"${ph.ph?` data-fb="${esc(ph.ph)}"`:''} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">${artSvg(p,w,h,true)}`;
 }
 function artSvg(p,w=60,h=72,hidden=false){
  const [b,d]=p.c||['#EEF1EF','#7B8A82']; let g='';

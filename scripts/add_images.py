@@ -33,7 +33,11 @@ for p in P:
     if not hit:
         continue
     s, r = hit
-    p['image'] = r['image']; p['imageSource'] = {'shop': s['shop'], 'date': today}
+    img = r['image']
+    # ask the shop's image server for a larger render where the size is in the URL, so cards and the product page are sharp
+    img = re.sub(r'([?&]sw=)\d+', lambda m: m.group(1) + '600', img)
+    img = re.sub(r'_\d+x\d+(?=[/?]|$)', '_600x600', img)
+    p['image'] = img; p['imageSource'] = {'shop': s['shop'], 'date': today}
     if r.get('thumb'): thumbs[p['id']] = r['thumb']
     n += 1
 json.dump(P, open(os.path.join(R, 'data', 'products.json'), 'w'), ensure_ascii=False, separators=(',', ':'))

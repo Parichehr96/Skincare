@@ -308,7 +308,7 @@ details.inci p{margin:4px 0 0;color:var(--muted);line-height:1.5}
 
 /* Real product photos */
 .art.hasphoto,.pstage.hasphoto{background:#fff;box-shadow:inset 0 0 0 1px var(--line);overflow:hidden}
-.pphoto{width:100%;height:100%;object-fit:contain;display:block;border-radius:inherit}
+.pphoto{width:100%;height:100%;object-fit:contain;display:block;border-radius:inherit;background-size:contain;background-position:center;background-repeat:no-repeat;background-color:#fff}
 .pstage .pphoto{width:auto;max-width:86%;height:86%}
 .art:not(.hasphoto),.pstage:not(.hasphoto){background:var(--artbg,transparent)}
 .pphoto[hidden]{display:none}
