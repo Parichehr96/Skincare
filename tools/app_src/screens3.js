@@ -42,7 +42,7 @@ SCREENS.scan={label:'Scan your products',render(){
  startCamera(); track('scan_open'); ensureCatalogue().catch(()=>{});
 }};
 let scanAdded=[];
-function scanRow(pid){const it=onShelf(pid)||{pid};const p=itemProduct(it);return `<div class="srow anim"><span class="art" style="${artBg(p)}">${art(p,36,44)}</span><span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span class="pname" style="font-size:14px">${esc(p.name)}</span>${p.custom?'<span class="pmeta">No reviews yet. Yours can be the first.</span>':peerLine(p)}</span></div>`;}
+function scanRow(pid){const it=onShelf(pid)||{pid};const p=itemProduct(it);return `<div class="srow anim"><span class="art${artCls(p,true)}" style="${artBg(p,true)}">${art(p,36,44,{own:true})}</span><span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span class="pname" style="font-size:14px">${esc(p.name)}</span>${p.custom?'<span class="pmeta">No reviews yet. Yours can be the first.</span>':peerLine(p)}</span></div>`;}
 let cam={};let zxP=null;
 function loadZX(){if(window.ZXing)return Promise.resolve(window.ZXing);if(zxP)return zxP;zxP=new Promise(res=>{const sc=document.createElement('script');sc.src=ZX_URL;sc.onload=()=>res(window.ZXing||null);sc.onerror=()=>{zxP=null;res(null);};document.head.appendChild(sc);});return zxP;}
 function zxReader(Z){const h=new Map();const F=Z.BarcodeFormat;h.set(Z.DecodeHintType.POSSIBLE_FORMATS,[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.CODE_128]);h.set(Z.DecodeHintType.TRY_HARDER,true);const mf=new Z.MultiFormatReader();mf.setHints(h);return {decodeCanvas(cv){try{const r=mf.decodeWithState(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(cv))));return r?r.getText():null;}catch(e){return null;}finally{try{mf.reset();}catch(e){}}}};}
@@ -71,11 +71,17 @@ function resumeCamera(delay=1200){const c=cam;setTimeout(()=>{if(cam===c&&c.on){
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCamera();else{const t=top();if(t&&t.name==='scan')startCamera();}});
 function flashVF(){const vf=$('#vf');if(!vf)return;vf.classList.remove('hit');void vf.offsetWidth;vf.classList.add('hit');if(navigator.vibrate){try{navigator.vibrate(30)}catch(e){}}}
 async function barcodeFromImage(file){const url=URL.createObjectURL(file);let code=null;try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url;});const cv=frameCanvas(img,img.naturalWidth,img.naturalHeight,1600);if('BarcodeDetector' in window){try{const d=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']});const r=await d.detect(cv);if(r&&r[0])code=r[0].rawValue;}catch(e){}}if(!code){const Z=await loadZX();if(Z){const rd=zxReader(Z);code=rd.decodeCanvas(cv)||rd.decodeCanvas(frameCanvas(img,img.naturalWidth,img.naturalHeight,900));}}}catch(e){}URL.revokeObjectURL(url);return code;}
-async function decodePhoto(file){vfCap('Reading the barcode…');$('#vfphotonote').textContent='Reading the barcode…';const code=await barcodeFromImage(file);if(!$('#vf'))return;if(!code){$('#vfphotonote').textContent='No barcode found in that photo. Try again closer, with the barcode flat and in focus.';return;}$('#vfphotonote').textContent='Hold the barcode flat, close and sharp.';onCode(code);}
+async function decodePhoto(file){lastShot=null;vfCap('Reading the barcode…');$('#vfphotonote').textContent='Reading the barcode…';const code=await barcodeFromImage(file);if(!$('#vf'))return;if(!code){$('#vfphotonote').textContent='No barcode found in that photo. Try again closer, with the barcode flat and in focus.';return;}$('#vfphotonote').textContent='Hold the barcode flat, close and sharp.';onCode(code);}
+let lastShot=null;
+/* A small copy of her own photo, kept in this browser only, shown on her shelf and nowhere else. */
+async function keepMyPhoto(pid,blob){try{const url=URL.createObjectURL(blob);const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url;});
+ const S0=240,k=Math.max(S0/img.naturalWidth,S0/img.naturalHeight),c=document.createElement('canvas');c.width=c.height=S0;
+ c.getContext('2d').drawImage(img,(S0-img.naturalWidth*k)/2,(S0-img.naturalHeight*k)/2,img.naturalWidth*k,img.naturalHeight*k);URL.revokeObjectURL(url);setMyPhoto(pid,c.toDataURL('image/jpeg',.72));}catch(e){}}
 async function scanFound(pid,extra){
  flashVF();
  if(onShelf(pid)){vfCap('Already on your shelf: '+itemName(onShelf(pid)));resumeCamera(1800);return;}
  try{await addToShelf(pid,extra);}catch(e){vfCap('Couldn\'t save that. Check your connection.');resumeCamera(1800);return;}
+ if(lastShot){await keepMyPhoto(pid,lastShot);lastShot=null;}
  scanAdded.unshift(pid);
  vfCap('Added '+itemName(onShelf(pid)));
  const list=$('#scanlist');list&&list.insertAdjacentHTML('afterbegin',scanRow(pid));
@@ -101,7 +107,7 @@ function pickProductSheet({title,lead,code,prefill}){
   <span class="label">Not in the list?</span><form id="uform" style="display:flex;flex-direction:column;gap:8px"><label for="uname" class="label" style="font-weight:500">Type the brand and product name</label><input id="uname" class="field" autocomplete="off" value="${esc(prefill||'')}"><div class="chips" id="ucat" role="group" aria-label="What kind of product"><button type="button" class="chip sm on" aria-pressed="true" data-v="moist">Moisturiser</button><button type="button" class="chip sm" aria-pressed="false" data-v="sun">Sunscreen</button><button type="button" class="chip sm" aria-pressed="false" data-v="other">Something else</button></div><button class="btn line" id="ubtn" ${prefill&&prefill.length>2?'':'disabled'}>Add it to my shelf</button></form>`,{onMount(sh){
   const q=sh.querySelector('#uq'),r=sh.querySelector('#uqres'),nm=sh.querySelector('#uname'),b=sh.querySelector('#ubtn'),seg=sh.querySelector('#ucat');let cat='moist';
   seg.addEventListener('click',e=>{const x=e.target.closest('button');if(!x)return;cat=x.dataset.v;seg.querySelectorAll('button').forEach(y=>{y.classList.toggle('on',y===x);y.setAttribute('aria-pressed',y===x);});});
-  let tm;const draw=async()=>{try{const j=await api('find',{query:{q:q.value.trim(),limit:'8'}});j.products.forEach(p=>S.cache[p.id]=p);r.innerHTML=j.products.map(p=>`<button class="pcard" data-a="pickfound" data-id="${esc(p.id)}" data-code="${esc(code||'')}"><span class="art" style="${artBg(p)}">${art(p,36,44)}</span><span class="meta"><span class="pname" style="font-size:14px">${esc(p.name)}</span><span class="pmeta">${onShelf(p.id)?'On your shelf':esc(cap(kindLabel(p)))+(shelfOnly(p)?' · shelf and ingredient check':'')}</span></span></button>`).join('')||'<p class="pmeta" style="margin:0">Nothing with that name yet. Type it below instead.</p>';}catch(e){r.innerHTML='<p class="pmeta">Couldn\'t search right now.</p>';}};
+  let tm;const draw=async()=>{try{const j=await api('find',{query:{q:q.value.trim(),limit:'8'}});j.products.forEach(p=>S.cache[p.id]=p);r.innerHTML=j.products.map(p=>`<button class="pcard" data-a="pickfound" data-id="${esc(p.id)}" data-code="${esc(code||'')}"><span class="art${artCls(p,true)}" style="${artBg(p,true)}">${art(p,36,44,{own:true})}</span><span class="meta"><span class="pname" style="font-size:14px">${esc(p.name)}</span><span class="pmeta">${onShelf(p.id)?'On your shelf':esc(cap(kindLabel(p)))+(shelfOnly(p)?' · shelf and ingredient check':'')}</span></span></button>`).join('')||'<p class="pmeta" style="margin:0">Nothing with that name yet. Type it below instead.</p>';}catch(e){r.innerHTML='<p class="pmeta">Couldn\'t search right now.</p>';}};
   q.addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(draw,250);});draw();
   nm.addEventListener('input',()=>{b.disabled=nm.value.trim().length<3;});
   sh.querySelector('#uform').addEventListener('submit',e=>{e.preventDefault();const v=nm.value.trim();if(v.length<3)return;const pid='x-'+norm(v).trim().replace(/ +/g,'-').slice(0,50);closeSheet();scanFound(pid,{name:v,cat});});
@@ -113,7 +119,7 @@ function hideShot(){const im=$('#vfshot');if(!im)return;im.hidden=true;const vf=
 function captureFrame(){const v=$('#vfvideo');if(!v||!v.videoWidth)return;flashVF();frameCanvas(v,v.videoWidth,v.videoHeight,1280).toBlob(b=>{if(b)identifyPhoto(b);},'image/jpeg',.88);}
 async function toDataURL(blob){const url=URL.createObjectURL(blob);try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url;});return frameCanvas(img,img.naturalWidth,img.naturalHeight,1280).toDataURL('image/jpeg',.85);}finally{URL.revokeObjectURL(url);}}
 async function identifyPhoto(blob){
- if(idBusy)return;idBusy=true;if(cam)cam.paused=true;
+ if(idBusy)return;idBusy=true;if(cam)cam.paused=true;lastShot=blob;
  const sh=$('#vfshutter');sh&&(sh.hidden=true);showShot(blob);vfCap('Recognising the product…');
  const done=()=>{idBusy=false;hideShot();const s=$('#vfshutter');if(s&&cam.stream)s.hidden=false;vfCap(cam.stream?'Fit the product in the frame, then tap':'');};
  let r;
@@ -125,7 +131,7 @@ async function identifyPhoto(blob){
  if(!r.readable){vfCap('Couldn\'t read a label. Try again with the front of the product filling the frame.');return;}
  const name=[r.brand,r.product].filter(Boolean).join(' ').trim();
  if(r.match&&r.confidence==='high'){scanFound(r.match);return;}
- if(r.match){const p=S.cache[r.match]||{name:r.match};openSheet('Is this your product?',`<div style="display:flex;gap:14px;align-items:center"><span class="art" style="${artBg(p)};width:60px;height:72px;border-radius:18px;display:grid;place-items:center;flex:none">${art(p,44,54)}</span><span style="display:flex;flex-direction:column;gap:2px"><span class="pname">${esc(p.name)}</span>${name?`<span class="pmeta">We read: ${esc(name)}</span>`:''}</span></div><button class="btn primary" data-a="pickfound" data-id="${esc(r.match)}">Yes, add it</button><button class="btn line" data-a="pickother" data-name="${esc(name)}">No, pick another</button>`);return;}
+ if(r.match){const p=S.cache[r.match]||{name:r.match};openSheet('Is this your product?',`<div style="display:flex;gap:14px;align-items:center"><span class="art${artCls(p)}" style="${artBg(p)};width:60px;height:72px;border-radius:18px;display:grid;place-items:center;flex:none">${art(p,44,54)}</span><span style="display:flex;flex-direction:column;gap:2px"><span class="pname">${esc(p.name)}</span>${name?`<span class="pmeta">We read: ${esc(name)}</span>`:''}</span></div><button class="btn primary" data-a="pickfound" data-id="${esc(r.match)}">Yes, add it</button><button class="btn line" data-a="pickother" data-name="${esc(name)}">No, pick another</button>`);return;}
  pickProductSheet({title:'New to us',lead:(name?`This looks like ${name}. `:'')+(r.category==='other'?'We don\'t have it in our list yet. You can still add it to your shelf. Reviews are open for face sunscreens and moisturisers only for now.':'We don\'t have it in our list yet. Add it to your shelf, and your review can be the first.'),prefill:name});
 }
 
@@ -153,7 +159,7 @@ function shelfRow(it){
  const p=itemProduct(it);
  const status=it.status==='stopped'?`Stopped: ${esc(it.reason||'no reason given')}`:shelfOnly(p)?`${esc(cap(kindLabel(p)))}, added ${Math.floor(daysSince(it.since))===0?'today':Math.floor(daysSince(it.since))+' days ago'}`:it.reviewed.late?'Reviewed after a few weeks':it.reviewed.early?'First impressions shared':`Added ${Math.floor(daysSince(it.since))===0?'today':Math.floor(daysSince(it.since))+' days ago'}`;
  const left=lifeLeft(it);
- return `<button class="srow ${it.status}" data-a="shelfitem" data-id="${esc(it.pid)}"><span class="art" style="${artBg(p)}">${art(p,38,46)}</span><span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span class="pname" style="font-size:14px">${esc(p.name)}</span><span class="pmeta">${status}</span>${it.status==='using'&&!p.custom?`<span class="meter ${left<.15?'low':''}" aria-label="About ${Math.round(left*100)}% left"><i style="width:${Math.round(left*100)}%"></i></span>`:''}</span>${IC.chev}</button>`;
+ return `<button class="srow ${it.status}" data-a="shelfitem" data-id="${esc(it.pid)}"><span class="art${artCls(p,true)}" style="${artBg(p,true)}">${art(p,38,46,{own:true})}</span><span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span class="pname" style="font-size:14px">${esc(p.name)}</span><span class="pmeta">${status}</span>${it.status==='using'&&!p.custom?`<span class="meter ${left<.15?'low':''}" aria-label="About ${Math.round(left*100)}% left"><i style="width:${Math.round(left*100)}%"></i></span>`:''}</span>${IC.chev}</button>`;
 }
 
 /* ---------- Check-in (review) ---------- */
@@ -167,7 +173,7 @@ SCREENS.checkin={label:'Check-in',render({id,stage}){
  const stings=ck.feel.includes('stings');
  return `${hdr(stage==='late'?'After a few weeks':'First impressions',{back:true})}
  <div class="body">
-  <div style="display:flex;gap:12px;align-items:center"><span class="art" style="${artBg(p)};width:52px;height:62px;border-radius:14px;display:grid;place-items:center;flex:none">${art(p,40,48)}</span><span class="pname">${esc(p.name)}</span></div>
+  <div style="display:flex;gap:12px;align-items:center"><span class="art${artCls(p,true)}" style="${artBg(p,true)};width:52px;height:62px;border-radius:14px;display:grid;place-items:center;flex:none">${art(p,40,48,{own:true})}</span><span class="pname">${esc(p.name)}</span></div>
   <p class="q">Would you buy it again?</p><div class="chips">${one('again',[['y','Yes'],['m','Maybe'],['n','No']])}</div>
   <p class="q">How does your skin feel with it?</p><div class="chips">${many('feel',feel)}</div>
   <p class="q">Anything else? <span style="font-weight:400;color:var(--muted)">(optional)</span></p><div class="chips">${many('extra',[['good under makeup','Good under makeup'],['pills','Pills'],['too expensive','Too expensive'],['lasts long','Lasts long']])}</div>
@@ -211,7 +217,7 @@ SCREENS.me={tab:'me',label:'Me',render(){
 }};
 const PRIVACY=`<p style="margin:0">We store your email (to sign you in), your skin details, your shelf and your reviews, on servers in the EU. Your reviews show only your skin type, age group and skin tone, never your name or email.</p>
 <p style="margin:0">Skin concerns are optional and need your OK. You can delete them, or your whole account, any time in Me, and download everything we store.</p>
-<p style="margin:0">To answer your questions and read product photos, we send the question or photo to our AI provider. We don't store your chat or your photos; your chat stays on this device.</p>
+<p style="margin:0">To answer your questions and read product photos, we send the question or photo to our AI provider. We don't store your chat or your photos; your chat stays on this device. A photo you take of a product on your shelf is kept on this phone only, and only you see it.</p>
 <p class="pmeta" style="margin:0">Early version. The full privacy policy follows after legal review.</p>`;
 
 /* ---------- Actions ---------- */
@@ -256,11 +262,12 @@ const A={
  reviewone:()=>{const x=scanAdded.map(onShelf).find(s=>s&&!s.reviewed.early&&reviewable(itemProduct(s)));if(x)go('checkin',{id:x.pid,stage:'early'});else toast(scanAdded.some(id=>shelfOnly(itemProduct(onShelf(id)||{pid:id})))?'Reviews are open for sunscreens and moisturisers only for now':'Products not in our list can be reviewed once we add them');},
  checkin:(el)=>{const p=itemProduct(onShelf(el.dataset.id)||{pid:el.dataset.id});if(shelfOnly(p)){toast('Reviews for these aren\'t open yet');return;}go('checkin',{id:el.dataset.id,stage:el.dataset.stage||'early'});},
  shelfitem:(el)=>{const it=onShelf(el.dataset.id);const p=itemProduct(it);const stage=!it.reviewed.early?'early':'late';
-  openSheet(p.name,`${shelfOnly(p)?`<p class="pmeta" style="margin:0">${esc(notOpenLine(p))}</p>`:''}${it.status==='using'&&reviewable(p)?`<button class="btn primary" data-a="checkin" data-id="${esc(it.pid)}" data-stage="${stage}">${stage==='early'?'Share first impressions':(it.reviewed.late?'Update my review':'Review after a few weeks')}</button>`:''}${it.status==='using'?`<button class="btn line" data-a="stopask" data-id="${esc(it.pid)}">I stopped using it</button>`:`<button class="btn line" data-a="restart" data-id="${esc(it.pid)}">I'm using it again</button>`}${p.custom?'':`<button class="btn line" data-a="product" data-id="${esc(it.pid)}">${shelfOnly(p)?'See the ingredient check':'See what women like you think'}</button>`}<button class="btn line" data-a="remove" data-id="${esc(it.pid)}" style="color:var(--rose-ink)">Remove from my shelf</button>`);},
+  openSheet(p.name,`${shelfOnly(p)?`<p class="pmeta" style="margin:0">${esc(notOpenLine(p))}</p>`:''}${it.status==='using'&&reviewable(p)?`<button class="btn primary" data-a="checkin" data-id="${esc(it.pid)}" data-stage="${stage}">${stage==='early'?'Share first impressions':(it.reviewed.late?'Update my review':'Review after a few weeks')}</button>`:''}${it.status==='using'?`<button class="btn line" data-a="stopask" data-id="${esc(it.pid)}">I stopped using it</button>`:`<button class="btn line" data-a="restart" data-id="${esc(it.pid)}">I'm using it again</button>`}${p.custom?'':`<button class="btn line" data-a="product" data-id="${esc(it.pid)}">${shelfOnly(p)?'See the ingredient check':'See what women like you think'}</button>`}<label class="btn line" for="myphoto-${esc(it.pid)}">${myPhotos()[it.pid]?'Retake my photo':'Use my own photo'}</label><input type="file" accept="image/*" capture="environment" hidden id="myphoto-${esc(it.pid)}" data-pid="${esc(it.pid)}" class="myphotoin">${myPhotos()[it.pid]?`<button class="btn line" data-a="myphotodel" data-id="${esc(it.pid)}">Remove my photo</button>`:''}<p class="pmeta" style="margin:0">Your photo stays on this phone. Only you see it.</p><button class="btn line" data-a="remove" data-id="${esc(it.pid)}" style="color:var(--rose-ink)">Remove from my shelf</button>`);},
+ myphotodel:(el)=>{setMyPhoto(el.dataset.id,null);closeSheet();refresh();},
  stopask:(el)=>{const id=el.dataset.id;openSheet('Why did you stop?',`<div class="chips">${['Stung or burned','Broke me out','Too greasy','Ran out',"Didn't do much",'Too expensive'].map(r=>`<button class="chip" data-a="stop" data-id="${esc(id)}" data-v="${esc(r)}">${esc(r)}</button>`).join('')}</div>`);},
  stop:async(el)=>{const next=S.shelf.map(x=>x.pid===el.dataset.id?{...x,status:'stopped',reason:el.dataset.v.toLowerCase()}:x);closeSheet();try{await saveShelf(next);toast('Moved to stopped using');refresh();}catch(e){toast('Couldn\'t save. Try again.');}},
  restart:async(el)=>{const next=S.shelf.map(x=>x.pid===el.dataset.id?{...x,status:'using',reason:null,since:new Date().toISOString()}:x);closeSheet();try{await saveShelf(next);refresh();}catch(e){}},
- remove:async(el)=>{const next=S.shelf.filter(x=>x.pid!==el.dataset.id);closeSheet();try{await saveShelf(next);toast('Removed from your shelf');refresh();}catch(e){}},
+ remove:async(el)=>{const next=S.shelf.filter(x=>x.pid!==el.dataset.id);closeSheet();try{await saveShelf(next);setMyPhoto(el.dataset.id,null);toast('Removed from your shelf');refresh();}catch(e){}},
  runout:(el)=>{pendingRunout=el.dataset.id;track('runout_switch');go('chat',{},'tab');},
  ck1:(el)=>{ck[el.dataset.k]=el.dataset.v;refresh();},
  ckm:(el)=>{const a=ck[el.dataset.k],v=el.dataset.v;const i=a.indexOf(v);if(i>=0)a.splice(i,1);else{if(v==='no change')a.length=0;else{const j=a.indexOf('no change');j>=0&&a.splice(j,1);}if(v==='white cast'){const k=a.indexOf('no white cast');k>=0&&a.splice(k,1);}if(v==='no white cast'){const k=a.indexOf('white cast');k>=0&&a.splice(k,1);}a.push(v);}refresh();},
@@ -273,9 +280,9 @@ const A={
  toggleremind:async(el)=>{const v=!S.user.reminders;el.setAttribute('aria-checked',v);try{const j=await api('me',{method:'PUT',body:{reminders:v}});S.user=j.user;toast(v?'Nudges on':'Nudges off');}catch(e){el.setAttribute('aria-checked',!v);}},
  mydata:async()=>{try{const j=await api('me/export');const blob=new Blob([JSON.stringify(j,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='skin-peers-my-data.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);toast('Your data is downloading');}catch(e){toast('Couldn\'t get your data. Try again.');}},
  delconcerns:async()=>{try{const j=await api('me',{method:'PUT',body:{deleteConcerns:true}});S.user=j.user;toast('Skin concerns deleted');refresh();}catch(e){toast('Couldn\'t delete them. Try again.');}},
- signout:async()=>{try{await api('auth/logout',{method:'POST'});}catch(e){}store.del(chatKey());S.chat=[];signedOut();},
+ signout:async()=>{try{await api('auth/logout',{method:'POST'});}catch(e){}store.del(chatKey());store.del(photoKey());S.chat=[];signedOut();},
  delacct:()=>openSheet('Delete your account?',`<p style="margin:0">This removes your profile, shelf and reviews for good. You can't undo it.</p><button class="btn primary" style="background:var(--rose-ink)" data-a="delconfirm">Delete my account</button><button class="btn line" data-a="closesheet">Keep my account</button>`),
- delconfirm:async(el)=>{el.disabled=true;el.textContent='Deleting…';try{await api('me',{method:'DELETE'});store.del(chatKey());S.chat=[];closeSheet(true);signedOut();toast('Your account is deleted');}catch(e){el.disabled=false;el.textContent='Delete my account';}},
+ delconfirm:async(el)=>{el.disabled=true;el.textContent='Deleting…';try{await api('me',{method:'DELETE'});store.del(chatKey());store.del(photoKey());S.chat=[];closeSheet(true);signedOut();toast('Your account is deleted');}catch(e){el.disabled=false;el.textContent='Delete my account';}},
  closesheet:()=>{closeSheet();if(cam.on)resumeCamera(300);},
 };
 document.addEventListener('click',e=>{
@@ -307,3 +314,5 @@ async function boot(){
 }
 A.bootretry=()=>boot();
 boot();
+
+document.addEventListener('change',async e=>{const t=e.target;if(!t||!t.classList||!t.classList.contains('myphotoin'))return;const f=t.files&&t.files[0];if(!f)return;await keepMyPhoto(t.dataset.pid,f);closeSheet();refresh();toast('Photo saved on this phone');});

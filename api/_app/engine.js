@@ -162,7 +162,7 @@ function card(p, st, j, simSt) {
   const outside = outsideOf(p);
   const basis = basisOf(st, simSt, outside);
   return {
-    id: p.id, name: p.name, brand: p.brand, cat: p.cat, kind: kindOf(p), reviewsOpen: isOpen(p), size: p.size, price: p.price, was: s0.was || null, shop: s0.shop || "",
+    id: p.id, name: p.name, brand: p.brand, image: p.image || null, cat: p.cat, kind: kindOf(p), reviewsOpen: isOpen(p), size: p.size, price: p.price, was: s0.was || null, shop: s0.shop || "",
     shopCount: p.shops.length, spf: p.spf, flags: p.flags, traits: p.traits, shape: p.shape, c: p.c,
     peer: st.peer, all: st.all, view: st.view, breakouts: st.breakouts, samples: st.samples, score: Math.round(j.score * 1000) / 1000, reasons: j.reasons, cautions: j.cautions,
     basis, similar: basis === "similar" || basis === "similar-all" ? { peer: simSt.peer, all: simSt.all, k: simSt.products.length, names: simSt.products.slice(0, 2).map((x) => x.name) } : null,

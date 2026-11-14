@@ -45,15 +45,37 @@ const cap=t=>t?t[0].toUpperCase()+t.slice(1):'';
 const notOpenLine=p=>`Reviews for ${KIND_PLURAL[p.kind]||'these products'} aren't open yet. You can keep it on your shelf.`;
 
 /* ---------- Pieces ---------- */
-function art(p,w=60,h=72){
+/* Product pictures. A real photo when we have one: the shop's pack photo, or on her own shelf the photo she took herself.
+   Her own photos stay in this browser (localStorage) and are never sent anywhere, so nobody else sees them. */
+const photoKey=()=>'sp-photos-'+(S.user?S.user.id:'x');
+const myPhotos=()=>store.get(photoKey())||{};
+function setMyPhoto(pid,dataUrl){const m=myPhotos();if(dataUrl)m[pid]=dataUrl;else delete m[pid];store.set(photoKey(),m);}
+function photoOf(p,own){
+ if(!p||!p.id)return null;
+ const mine=own&&myPhotos()[p.id]; if(mine)return {src:mine,own:true};
+ const th=window.SP_THUMBS&&window.SP_THUMBS[p.id];
+ if(th)return {src:th};
+ return p.image?{src:p.image}:null;
+}
+document.addEventListener('error',e=>{const t=e.target;if(!t||!t.classList||!t.classList.contains('pphoto'))return;
+ if(t.dataset.fb&&t.src!==t.dataset.fb){const f=t.dataset.fb;delete t.dataset.fb;t.src=f;return;}
+ t.hidden=true;const s=t.nextElementSibling;if(s)s.removeAttribute('hidden');const box=t.parentElement;if(box){box.classList.remove('hasphoto');}},true);
+function art(p,w=60,h=72,{own=false,large=false}={}){
+ const ph=photoOf(p,own);
+ if(ph){const big=large&&!ph.own&&p.image&&p.image!==ph.src;
+  return `<img class="pphoto" src="${esc(big?p.image:ph.src)}"${big?` data-fb="${esc(ph.src)}"`:''} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">${artSvg(p,w,h,true)}`;}
+ return artSvg(p,w,h,false);
+}
+function artSvg(p,w=60,h=72,hidden=false){
  const [b,d]=p.c||['#EEF1EF','#7B8A82']; let g='';
  if(p.shape==='tube') g=`<rect x="15" y="4" width="30" height="6" rx="2.5" fill="${d}" opacity=".35"/><path d="M16 9h28l-3 47H19z" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="22" y="56" width="16" height="15" rx="4" fill="${d}"/><rect x="22" y="22" width="16" height="18" rx="4" fill="#fff" opacity=".7"/><rect x="25" y="27" width="10" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  else if(p.shape==='jar') g=`<rect x="9" y="24" width="42" height="13" rx="5" fill="${d}"/><rect x="7" y="35" width="46" height="31" rx="11" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="18" y="43" width="24" height="14" rx="4" fill="#fff" opacity=".7"/><rect x="22" y="48" width="16" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  else if(p.shape==='pump') g=`<rect x="26" y="4" width="8" height="11" rx="2" fill="${d}"/><rect x="33" y="5" width="12" height="5" rx="2.5" fill="${d}"/><rect x="21" y="14" width="18" height="9" rx="3" fill="${d}"/><rect x="15" y="22" width="30" height="49" rx="10" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="21" y="36" width="18" height="18" rx="4" fill="#fff" opacity=".7"/><rect x="24" y="41" width="12" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  else g=`<rect x="24" y="4" width="12" height="18" rx="5" fill="${d}"/><rect x="18" y="21" width="24" height="50" rx="9" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="22" y="34" width="16" height="20" rx="4" fill="#fff" opacity=".7"/><rect x="25" y="40" width="10" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
- return `<svg width="${w}" height="${h}" viewBox="0 0 60 76" aria-hidden="true">${g}</svg>`;
+ return `<svg width="${w}" height="${h}" viewBox="0 0 60 76" aria-hidden="true"${hidden?' hidden':''}>${g}</svg>`;
 }
-const artBg=p=>`background:${(p.c||['#EEF1EF'])[0]}`;
+const artBg=(p,own)=>photoOf(p,own)?`--artbg:${(p.c||['#EEF1EF'])[0]}`:`background:${(p.c||['#EEF1EF'])[0]}`;
+const artCls=(p,own)=>photoOf(p,own)?' hasphoto':'';
 function dots(yes,total,{size=8,play=false,max=24}={}){
  let n=total,y=yes; if(total>max){n=20;y=Math.round(yes/total*20);}
  let h='';for(let i=0;i<n;i++){h+=`<span class="dot ${i<y?'':'no'}" style="--c:${TONES[(i*3)%8]};--i:${i};--s:${size}px"></span>`;}
@@ -77,7 +99,7 @@ function metaLine(p){
 }
 function pcard(p,{act='product',reason=true}={}){
  const why=reason&&p.reasons&&p.reasons[0]?`<span class="reason">${IC.check}${esc(p.reasons[0])}</span>`:(reason&&p.cautions&&p.cautions[0]?`<span class="reason warn">${IC.info}${esc(p.cautions[0])}</span>`:'');
- return `<button class="pcard" data-a="${act}" data-id="${esc(p.id)}"><span class="art" style="${artBg(p)}">${art(p,44,54)}</span><span class="meta"><span class="pname">${esc(p.name)}</span><span class="pmeta">${metaLine(p)}</span>${peerLine(p)}${why}</span></button>`;
+ return `<button class="pcard" data-a="${act}" data-id="${esc(p.id)}"><span class="art${artCls(p)}" style="${artBg(p)}">${art(p,44,54)}</span><span class="meta"><span class="pname">${esc(p.name)}</span><span class="pmeta">${metaLine(p)}</span>${peerLine(p)}${why}</span></button>`;
 }
 function hdr(title,{back=false,right='',sub=''}={}){
  return `<header class="hdr ${back?'back':''}">${back?`<button class="iconbtn" data-a="back" aria-label="Back">${IC.back}</button>`:''}<h1>${title}${sub?`<span class="sub" style="display:block;font-family:var(--f-body);font-weight:500">${sub}</span>`:''}</h1>${right}</header>`;

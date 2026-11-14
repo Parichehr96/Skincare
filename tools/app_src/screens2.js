@@ -131,7 +131,7 @@ SCREENS.product={label:'Product',render({id}){
  <div class="body" id="pbody">${p?productTop(p):''}${spinner()}</div>
  <div class="foot" id="pfoot"></div>`;
 },mount(el,{id,view},again){loadProduct(id,view,again);}};
-function productTop(p){return `<div class="pstage" style="${artBg(p)}">${art(p)}</div><div style="display:flex;flex-direction:column;gap:6px"><h2 class="ptitle">${esc(p.name)}</h2><span class="pmeta">${esc([p.size,kindLabel(p),p.spf?('SPF'+p.spf):''].filter(Boolean).join(', '))}</span></div>`;}
+function productTop(p){return `<div class="pstage${artCls(p)}" style="${artBg(p)}">${art(p,60,72,{large:true})}</div><div style="display:flex;flex-direction:column;gap:6px"><h2 class="ptitle">${esc(p.name)}</h2><span class="pmeta">${esc([p.size,kindLabel(p),p.spf?('SPF'+p.spf):''].filter(Boolean).join(', '))}</span></div>`;}
 async function loadProduct(id,view,again){
  try{
   const d=S.cache['d:'+id]&&again?S.cache['d:'+id]:await api('product',{query:{id}});

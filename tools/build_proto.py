@@ -34,7 +34,9 @@ A.protoresetgo=()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('sp-'))
 icons=open(A+'/proto_icons.js').read()
 mock=open(A+'/mock.js').read()
 P=open(R+'/data/products.json').read(); SM=open(R+'/data/sample-reviews.json').read()
-js='(function(){"use strict";\n'+icons+main+'\nconst PRODUCTS_DATA='+P+';\nconst SAMPLES_DATA='+SM+';\nconst ENG=(function(PRODUCTS0,SAMPLES0){'+eng+'})(PRODUCTS_DATA,SAMPLES_DATA);\nconst AIX=(function(engine){'+ai+'})(ENG);\n'+mock+'\n'+s1+'\n'+open(A+'/screens2.js').read()+'\n'+s3+'\n'+extra+'\n})();'
+TH=open(HERE+'/proto_thumbs.json').read() if os.path.exists(HERE+'/proto_thumbs.json') else '{}'
+# small pack photos, built in so the prototype shows real products without loading anything from the shops
+js='window.SP_THUMBS='+TH+';\n(function(){"use strict";\n'+icons+main+'\nconst PRODUCTS_DATA='+P+';\nconst SAMPLES_DATA='+SM+';\nconst ENG=(function(PRODUCTS0,SAMPLES0){'+eng+'})(PRODUCTS_DATA,SAMPLES_DATA);\nconst AIX=(function(engine){'+ai+'})(ENG);\n'+mock+'\n'+s1+'\n'+open(A+'/screens2.js').read()+'\n'+s3+'\n'+extra+'\n})();'
 open(os.path.join(OUT,'bundle.js'),'w').write(js)
 html=open(R+'/app/index.html').read()
 body=html[html.index('<div class="desk">'):html.index('<script src="app.js">')]
