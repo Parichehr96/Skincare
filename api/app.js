@@ -186,7 +186,7 @@ module.exports = async (req, res) => {
       if (!(await db.limit("chat:" + user.id, 40, 3600))) return sendJSON(res, 429, { error: "slow_down" });
       if (ai.hasKey() && !(await db.limit("chatday:" + db.today(), max, 86400))) return sendJSON(res, 429, { error: "daily_limit" });
       const { all, on } = await reviewsFor();
-      const out = await ai.chat({ messages: msgs, profile: user.profile, reviews: all, samples: on });
+      const out = await ai.chat({ messages: msgs, profile: user.profile, reviews: all, samples: on, context: b.context && typeof b.context === "object" ? b.context : null });
       const pipe = [["HINCRBY", "app:stats:topics", out.topic, 1]];
       await Promise.all([db.track("chat", ...(out.medical ? ["chat_medical"] : [])), db.pipe(pipe)]);
       return sendJSON(res, 200, out);

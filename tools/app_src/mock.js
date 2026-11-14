@@ -11,20 +11,20 @@ function bump(n){DB.stats[n]=(DB.stats[n]||0)+1;}
 let sampleFn=null;
 async function getSample(){if(sampleFn!==null)return sampleFn;try{if(!window.claude||!window.claude.use){sampleFn=false;return false;}const s=await window.claude.use('sample');if(!s){sampleFn=false;return false;}const lim=await s.limits().catch(()=>null);s._images=!!(lim&&lim.images);sampleFn=s;return s;}catch(e){sampleFn=false;return false;}}
 getSample();
-async function aiChat(messages,profile,reviews){
+async function aiChat(messages,profile,reviews,context){
+ const ctx={shown:context&&Array.isArray(context.shown)?context.shown.map(String).filter(id=>ENG.BY_ID[id]).slice(0,3):[],cat:context&&context.cat};
  const last=(messages[messages.length-1]||{}).text||'';
  const cands=[...ENG.rank(reviews,profile,{cat:'sun'}).slice(0,12),...ENG.rank(reviews,profile,{cat:'moist'}).slice(0,12)];
  const s=await getSample(); let out=null,usedAI=false;
  if(s){
-  const turns=[{role:'user',content:AIX.SYSTEM(profile,cands,true)+'\n\nThe conversation so far follows. Answer her last message.'}];
+  const turns=[{role:'user',content:AIX.SYSTEM(profile,cands,true,AIX.extras(messages,ctx,cands,reviews,profile))+'\n\nThe conversation so far follows. Answer her last message.'}];
   messages.slice(-8).forEach(m=>{const role=m.role==='assistant'?'assistant':'user';const t=String(m.text||'').slice(0,1500)||'…';if(turns[turns.length-1].role===role)turns[turns.length-1].content+='\n\n'+t;else turns.push({role,content:t});});
   if(turns[turns.length-1].role!=='user')turns.push({role:'user',content:'(continue)'});
   try{out=await s.json(turns,{modelTier:'quick',cache:false});usedAI=!!out;}catch(e){if(e&&(e.code==='not_granted'||e.code==='sampling_disabled'))sampleFn=false;}
  }
- if(!out||typeof out.reply!=='string') out=AIX.fallback(last,profile,reviews);
- const all=Object.fromEntries(ENG.rank(reviews,profile,{}).map(c=>[c.id,c]));
- const ids=(Array.isArray(out.products)?out.products:[]).map(String).filter(id=>all[id]).slice(0,3);
- return {reply:String(out.reply).slice(0,1200),products:ids.map(id=>all[id]),chips:(Array.isArray(out.chips)?out.chips:[]).map(String).filter(Boolean).slice(0,3),topic:String(out.topic||'other'),medical:!!out.medical||(AIX.MEDICAL.test(last)&&out.topic==='medical'),ai:usedAI};
+ if(!out||typeof out.reply!=='string') out=AIX.fallback(messages,profile,reviews,ctx);
+ const ids=[...new Set((Array.isArray(out.products)?out.products:[]).map(String))].filter(id=>ENG.BY_ID[id]).slice(0,3);
+ return {reply:String(out.reply).slice(0,1200),products:ENG.search(reviews,profile,{ids}),chips:(Array.isArray(out.chips)?out.chips:[]).map(String).filter(Boolean).slice(0,3),topic:String(out.topic||'other'),medical:!!out.medical||(AIX.MEDICAL.test(last)&&out.topic==='medical'),ai:usedAI};
 }
 async function aiIdentify(image){
  const s=await getSample(); if(!s||!s._images) throw new ApiError('ai_not_configured',503);
@@ -59,7 +59,7 @@ async function localApi(route,{method='GET',body={},query={}}={}){
   bump(s==='l'?'review_late':'review_early');if(first)bump('unlock');dbSave();
   const mine=ENG.features(p);const peers=new Set(DB.reviews.filter(x=>x.uid&&x.uid!==uid&&ENG.sim(mine,x.g)>=ENG.PEER_MIN).map(x=>x.uid)).size;
   return {ok:true,firstUnlock:first,helps:peers,shelf:shelf.map(x=>({...x}))};}
- if(route==='chat'){const msgs=(body.messages||[]).filter(x=>x&&typeof x.text==='string').slice(-8);if(!msgs.length)throw new ApiError('no_message',400);bump('chat');return aiChat(msgs,user.profile,reviewsAll());}
+ if(route==='chat'){const msgs=(body.messages||[]).filter(x=>x&&typeof x.text==='string').slice(-8);if(!msgs.length)throw new ApiError('no_message',400);bump('chat');return aiChat(msgs,user.profile,reviewsAll(),body.context);}
  if(route==='identify'){bump('identify');return aiIdentify(body.image);}
  if(route==='ean'&&m==='GET') return {pid:DB.ean[String(query.code||'')]||null};
  if(route==='ean'&&m==='POST'){if(ENG.BY_ID[body.pid])DB.ean[String(body.code)]=body.pid;dbSave();return {ok:true};}
