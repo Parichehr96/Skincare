@@ -2,4 +2,3 @@ tools/proto/
 tools/apptest/*.png
 node_modules/
 __pycache__/
-reports/*.xlsx
