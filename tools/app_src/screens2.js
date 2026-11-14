@@ -3,15 +3,38 @@ const STARTERS=['A moisturiser under €20','A sunscreen with no white cast','My
 SCREENS.chat={tab:'chat',label:'Chat',render(){
  return `${hdr('Chat',{sub:'Assistant, not a doctor',right:`<button class="grp" data-a="tab" data-t="me">${esc(groupLabel())}</button>`})}
  <div class="body" id="chatbody"><div class="thread" id="thread">${S.chat.map(m=>msgHTML(m,false)).join('')}</div></div>
- <form class="composer" id="composer"><label for="msg" style="position:absolute;left:-9999px">Message</label><input id="msg" autocomplete="off" maxlength="800" placeholder="Ask anything about skincare"><button class="send" aria-label="Send">${IC.send}</button></form>`;
+ <form class="composer" id="composer"><label for="msg" style="position:absolute;left:-9999px">Message</label><input id="msg" autocomplete="off" maxlength="800" placeholder="${esc(chatHints()[0])}"><button class="send" aria-label="Send">${IC.send}</button></form>`;
 },mount(el,params){
  if(!S.chat.length){S.chat.push({who:'bot',type:'text',text:`Hi! You're matched with women with ${(TYPE_NAME[prof().type]||'').toLowerCase()} skin, aged ${ageLabel(prof().age)}. What are you looking for?`},{who:'bot',type:'chips',chips:STARTERS},{who:'bot',type:'scan'});saveChat();$('#thread').innerHTML=S.chat.map(m=>msgHTML(m,false)).join('');}
  const b=$('#chatbody'); requestAnimationFrame(()=>b.scrollTop=b.scrollHeight);
+ startHints();
  $('#composer').addEventListener('submit',e=>{e.preventDefault();const i=$('#msg');const v=i.value.trim();if(!v)return;i.value='';userSays(v);});
  if(pendingSay){const v=pendingSay;pendingSay=null;setTimeout(()=>userSays(v),350);}
  if(pendingRunout){const id=pendingRunout;pendingRunout=null;setTimeout(()=>runoutMsgs(id),350);}
 }};
 let pendingSay=null,pendingRunout=null,chatBusy=false;
+/* The placeholder suggests what she could ask next: about the product just shown, or from her own profile and shelf. */
+function lastShown(){const r=S.chat.slice(-8);for(let i=r.length-1;i>=0;i--){const m=r[i];if(m.type==='products'&&m.items&&m.items.length)return m.items;}return [];}
+function chatHints(){
+ const p=prof()||{},c=p.concerns||[],shown=lastShown(),asked=S.chat.some(m=>m.who==='me');
+ if(shown.length){const x=shown[0];return [x.flags&&x.flags.fragrance===false?'Does it have alcohol?':'Is it fragrance-free?','Where can I buy it?',x.reviewsOpen===false?"What's in it?":'Will it break me out?','Something cheaper?','Show me another option'];}
+ const mine=(S.shelf||[]).map(x=>S.cache[x.pid]).filter(Boolean)[0];
+ const out=[];
+ if(mine)out.push(`Is my ${mine.brand||'product'} right for me?`);
+ if(c.includes('breakouts'))out.push("A sunscreen that won't break me out");
+ if(p.type==='oily'||p.type==='combination')out.push("A moisturiser that isn't shiny");
+ if(p.type==='dry')out.push('Something for tight, dry cheeks');
+ if(c.includes('sensitivity')||c.includes('redness'))out.push('A fragrance-free sunscreen');
+ out.push(p.budget==='u10'?'A sunscreen under €10':p.budget==='20-35'?'A moisturiser under €30':'A moisturiser under €20','Name a product to check it');
+ if(asked)out.push('Ask a follow-up, or name a product');
+ return out;
+}
+let hintTimer=null;
+function startHints(){
+ clearInterval(hintTimer);let i=0;
+ const tick=()=>{const el=$('#msg');if(!el){clearInterval(hintTimer);return;}if(el.value)return;const h=chatHints();i=i%h.length;el.placeholder=h[i];i++;};
+ tick(); if(!RM) hintTimer=setInterval(tick,4000);
+}
 function msgHTML(m,a){
  const A=a?' anim':'';
  if(m.who==='me') return `<div class="msg me${A}"><div class="bub">${esc(m.text)}</div></div>`;
@@ -28,6 +51,7 @@ function msgHTML(m,a){
 }
 function appendMsgs(list,a=true){const th=$('#thread');list.forEach(m=>{S.chat.push(m);th&&th.insertAdjacentHTML('beforeend',msgHTML(m,a));});saveChat();const b=$('#chatbody');b&&(b.scrollTop=b.scrollHeight);}
 function consumeChips(){S.chat.forEach(m=>{if(m.type==='chips')m.used=true;});document.querySelectorAll('[data-chips]').forEach(x=>x.remove());}
+function chatContext(){return {shown:lastShown().map(x=>x.id).slice(0,3),cat:S.lastCat||null};}
 function convo(){return S.chat.filter(m=>m.type==='text'&&!m.local).map(m=>({role:m.who==='me'?'user':'assistant',text:m.text})).slice(-8);}
 async function userSays(text){
  if(chatBusy) return; chatBusy=true;
@@ -35,7 +59,8 @@ async function userSays(text){
  const th=$('#thread'); th&&th.insertAdjacentHTML('beforeend',`<div class="msg anim" id="typing"><span class="typing"><i></i><i></i><i></i></span></div>`);
  const b=$('#chatbody');b&&(b.scrollTop=b.scrollHeight);
  try{
-  const j=await api('chat',{method:'POST',body:{messages:convo()}});
+  const context=chatContext();
+  const j=await api('chat',{method:'POST',body:{messages:convo(),context}});
   const t=$('#typing');t&&t.remove();
   const out=[{who:'bot',type:'text',text:j.reply}];
   if(j.medical) out.push({who:'bot',type:'safety'});
@@ -43,11 +68,13 @@ async function userSays(text){
   const chips=(j.chips||[]).filter(c=>!/^see all/i.test(c)).slice(0,3); if(j.products&&j.products.length) chips.push('See all matches');
   if(chips.length) out.push({who:'bot',type:'chips',chips});
   for(const m of out){appendMsgs([m]);await new Promise(r=>setTimeout(r,RM?0:220));}
+  startHints();
  }catch(e){const t=$('#typing');t&&t.remove();appendMsgs([{who:'bot',type:'error',local:true,text:e.code==='slow_down'?'That\'s a lot of questions in a short time. Wait a few minutes and ask again.':e.code==='daily_limit'?'The assistant has reached today\'s limit. Try again tomorrow, or browse Matches.':'I couldn\'t answer that just now. Check your connection and try again.'}]);}
  chatBusy=false;
 }
 function chipAction(v){
  if(v==='See all matches'){consumeChips();S.m.cat=S.lastCat||S.m.cat;go('matches',{},'tab');return;}
+ if(/^scan (it|my product)/i.test(v)){consumeChips();A.startscan();return;}
  if(/pause a product|stop a product/i.test(v)){consumeChips();go('shelf',{},'tab');return;}
  if(/^is my sunscreen good/i.test(v)){
   const mine=S.shelf.find(x=>x.status==='using'&&S.cache[x.pid]&&S.cache[x.pid].cat==='sun');

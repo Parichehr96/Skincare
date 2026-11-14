@@ -14,7 +14,7 @@ assert 'require(' not in eng
 eng=eng.replace('module.exports = {','return {')
 ai=open(R+'/api/_app/ai.js').read()
 ai=ai.replace('const engine = require("./engine");','')
-ai=ai.replace('module.exports = { chat, identify, hasKey, MEDICAL };','return { SYSTEM, fallback, MEDICAL };')
+ai=ai.replace('module.exports = { chat, identify, hasKey, MEDICAL, fallback, mentioned };','return { SYSTEM, fallback, MEDICAL, extras };')
 assert 'require(' not in ai
 main=open(A+'/main.js').read()
 i=main.index('async function api(route'); j=main.index('function track(name)')
