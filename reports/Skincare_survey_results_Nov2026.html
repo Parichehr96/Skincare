@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Skincare survey results</title>
+<style>
+:root{--forest:#1F4D3A;--mint:#CDEBD8;--mint-soft:#E9F6EE;--ink:#15241C;--muted:#53645B;--line:#E0E8E2;--ground:#F4F8F5;--grey:#C9D3CC}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.page{max-width:720px;margin:0 auto;padding:40px 20px 56px}
+header{background:var(--forest);color:#fff;border-radius:24px;padding:32px 28px}
+header .kicker{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#BFE3CC;margin:0 0 10px}
+h1{margin:0;font-size:32px;line-height:1.15;letter-spacing:-.01em}
+header p{margin:14px 0 0;color:#D9EEE1;max-width:56ch}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px}
+.facts div{background:rgba(255,255,255,.1);border-radius:14px;padding:12px 14px}
+.facts b{display:block;font-size:24px;line-height:1.1}
+.facts span{font-size:13px;color:#D9EEE1}
+section{background:#fff;border-radius:20px;padding:24px;margin-top:16px}
+h2{margin:0 0 6px;font-size:21px;line-height:1.25}
+.lead{margin:0 0 16px;color:var(--muted)}
+.bars{display:flex;flex-direction:column;gap:9px}
+.bar{display:grid;grid-template-columns:minmax(120px,190px) 1fr 44px;gap:12px;align-items:center;font-size:15px}
+.track{height:14px;border-radius:999px;background:var(--mint-soft);overflow:hidden}
+.fill{display:block;height:100%;border-radius:999px;background:var(--grey)}
+.fill.hi{background:var(--forest)}
+.bar .n{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.stack{display:flex;height:34px;border-radius:12px;overflow:hidden;margin:6px 0 10px}
+.stack span{display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.note{background:var(--mint-soft);border-radius:14px;padding:12px 16px;margin-top:16px;font-size:15px}
+.big{font-size:40px;font-weight:700;color:var(--forest);line-height:1;font-variant-numeric:tabular-nums}
+.big small{font-size:16px;font-weight:600;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.two>div{background:var(--ground);border-radius:16px;padding:16px}
+.two p{margin:8px 0 0;font-size:15px;color:var(--muted)}
+blockquote{margin:0;padding:10px 14px;border-left:3px solid var(--mint);background:var(--ground);border-radius:0 12px 12px 0;font-size:15px}
+.quotes{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+footer{margin-top:20px;font-size:13px;color:var(--muted);padding:0 4px}
+footer p{margin:6px 0}
+@media (max-width:560px){h1{font-size:26px}.facts{grid-template-columns:1fr 1fr 1fr}.facts b{font-size:20px}.bar{grid-template-columns:110px 1fr 36px;font-size:14px}.two{grid-template-columns:1fr}section{padding:20px}}
+@media print{body{background:#fff}.page{padding:0}section,header{break-inside:avoid}header{-webkit-print-color-adjust:exact;print-color-adjust:exact}.fill,.stack span,.legend i{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="kicker">Survey results · November 2026</p>
+  <h1>How women in the Netherlands choose a face sunscreen and moisturiser</h1>
+  <p>Thank you for taking part. Here is what everyone answered, put together. No answer can be traced back to a person, and groups smaller than five people are not shown on their own.</p>
+  <div class="facts">
+    <div><b>55</b><span>women answered</span></div>
+    <div><b>27 Oct–7 Nov</b><span>2026</span></div>
+    <div><b>2:39</b><span>median minutes to finish</span></div>
+  </div>
+</header>
+
+<section>
+  <h2>Who answered</h2>
+  <p class="lead">Most were aged 18 to 34. Women over 35, and women with deeper skin tones, are under-represented, so these results speak mostly for younger women with lighter skin.</p>
+  <div class="bars">
+    <div class="bar"><span>18–24</span><span class="track"><span class="fill" style="width:60%"></span></span><span class="n">15</span></div>
+    <div class="bar"><span>25–34</span><span class="track"><span class="fill hi" style="width:100%"></span></span><span class="n">25</span></div>
+    <div class="bar"><span>35 and over</span><span class="track"><span class="fill" style="width:60%"></span></span><span class="n">15</span></div>
+  </div>
+  <p class="lead" style="margin:16px 0 0">27 answered about a sunscreen, 23 about a moisturiser. 40 answered in English and 15 in Dutch.</p>
+</section>
+
+<section>
+  <h2>What matters most when choosing</h2>
+  <p class="lead">A light texture and SPF lead. Ingredients come close behind, picked by 22 of 55. Everyone could pick up to three.</p>
+  <div class="bars">
+    <div class="bar"><span>Light texture</span><span class="track"><span class="fill hi" style="width:100%"></span></span><span class="n">31</span></div>
+    <div class="bar"><span>Has SPF</span><span class="track"><span class="fill hi" style="width:97%"></span></span><span class="n">30</span></div>
+    <div class="bar"><span>Ingredients</span><span class="track"><span class="fill hi" style="width:71%"></span></span><span class="n">22</span></div>
+    <div class="bar"><span>Low price</span><span class="track"><span class="fill" style="width:52%"></span></span><span class="n">16</span></div>
+    <div class="bar"><span>No white cast</span><span class="track"><span class="fill" style="width:45%"></span></span><span class="n">14</span></div>
+    <div class="bar"><span>Works under makeup</span><span class="track"><span class="fill" style="width:42%"></span></span><span class="n">13</span></div>
+    <div class="bar"><span>Fragrance-free</span><span class="track"><span class="fill" style="width:35%"></span></span><span class="n">11</span></div>
+  </div>
+  <div class="note">Budgets are steady: 32 of 55 usually spend €10–20 on one product. 9 spend under €10, and 14 spend €20 or more.</div>
+</section>
+
+<section>
+  <h2>How you picked the product you use now</h2>
+  <p class="lead">Online reviews are named most. Social media and friends together come up even more often, so word of mouth still counts. 49 answered, up to two picks each.</p>
+  <div class="bars">
+    <div class="bar"><span>Online reviews</span><span class="track"><span class="fill hi" style="width:100%"></span></span><span class="n">19</span></div>
+    <div class="bar"><span>Social media</span><span class="track"><span class="fill" style="width:68%"></span></span><span class="n">13</span></div>
+    <div class="bar"><span>A friend or family member</span><span class="track"><span class="fill" style="width:63%"></span></span><span class="n">12</span></div>
+    <div class="bar"><span>It was on offer</span><span class="track"><span class="fill" style="width:47%"></span></span><span class="n">9</span></div>
+    <div class="bar"><span>A doctor or skin therapist</span><span class="track"><span class="fill" style="width:42%"></span></span><span class="n">8</span></div>
+  </div>
+  <div class="note">Shelves reach beyond the drugstore: 17 of 49 named a brand outside the usual drugstore names, and 10 use Korean or Japanese skincare. Among drugstore brands, La Roche-Posay was named most (9), then CeraVe (5).</div>
+</section>
+
+<section>
+  <h2>How fast you know if it works</h2>
+  <div class="two">
+    <div><div class="big">34 <small>of 49</small></div><p>can tell within a week: 18 after a few days and 16 after about a week.</p></div>
+    <div><div class="big">15 <small>of 49</small></div><p>need longer: 11 about two to three weeks, and 4 a month or more.</p></div>
+  </div>
+  <div class="note">A first impression is often about how a product feels, like texture, shine or stinging. Changes such as fewer breakouts or a more even tone take longer to show.</div>
+</section>
+
+<section>
+  <h2>Would you trust an AI chat to suggest a product?</h2>
+  <p class="lead">Few would trust it on its own. A third would, if it shows reviews from real women. 54 answered.</p>
+  <div class="stack" role="img" aria-label="Yes 7, only with real reviews 18, not sure 8, no 21">
+    <span style="width:13%;background:#9CCDB0">7</span>
+    <span style="width:33.3%;background:var(--mint)">18</span>
+    <span style="width:14.8%;background:#E7EEE9">8</span>
+    <span style="width:38.9%;background:var(--grey)">21</span>
+  </div>
+  <div class="legend"><span><i style="background:#9CCDB0"></i>Yes</span><span><i style="background:var(--mint)"></i>Only if it shows real reviews</span><span><i style="background:#E7EEE9"></i>Not sure</span><span><i style="background:var(--grey)"></i>No</span></div>
+  <div class="note">The questions people wrote down show what would help: how a product was tested, who checked it, and whether anyone is paid to recommend it.</div>
+</section>
+
+<section>
+  <h2>A big star rating, or reviews from women like you?</h2>
+  <p class="lead">Asked to choose between "4.3 stars from 2,300 reviews" and "11 of 14 women with skin like yours would buy it again", most picked the big rating. Younger women were split almost evenly.</p>
+  <div class="bars">
+    <div class="bar"><span>The big star rating</span><span class="track"><span class="fill hi" style="width:100%"></span></span><span class="n">28</span></div>
+    <div class="bar"><span>Women like you</span><span class="track"><span class="fill" style="width:61%"></span></span><span class="n">17</span></div>
+    <div class="bar"><span>Both together</span><span class="track"><span class="fill" style="width:21%"></span></span><span class="n">6</span></div>
+    <div class="bar"><span>Neither</span><span class="track"><span class="fill" style="width:14%"></span></span><span class="n">4</span></div>
+  </div>
+  <div class="note">How many reviews from women with similar skin before you'd trust a product? 10 was enough for 23 of the 43 who named a number, and 20 was enough for all of them. 12 said the number doesn't matter.</div>
+</section>
+
+<section>
+  <h2>Sharing a review to read everyone's reviews</h2>
+  <p class="lead">More than half find it fair to share one review of a product you use before reading all reviews, and most of them only if it's explained why. 54 answered.</p>
+  <div class="stack" role="img" aria-label="Fair 10, fair if explained 19, a bit pushy 17, would stop using it 8">
+    <span style="width:18.5%;background:#9CCDB0">10</span>
+    <span style="width:35.2%;background:var(--mint)">19</span>
+    <span style="width:31.5%;background:#E7EEE9">17</span>
+    <span style="width:14.8%;background:var(--grey)">8</span>
+  </div>
+  <div class="legend"><span><i style="background:#9CCDB0"></i>Fair</span><span><i style="background:var(--mint)"></i>Fair, if it explains why</span><span><i style="background:#E7EEE9"></i>A bit pushy</span><span><i style="background:var(--grey)"></i>I'd stop using it</span></div>
+</section>
+
+<section>
+  <h2>What you'd ask</h2>
+  <p class="lead">24 people wrote a question they'd ask about skincare. Most are about two things: is this right for my skin (10), and what's in it (7).</p>
+  <div class="quotes">
+    <blockquote>"Waarom juist die voor mij goed zou werken?"</blockquote>
+    <blockquote>"Have any been flagged as acne causing or pore clogging?"</blockquote>
+    <blockquote>"Van welke zonnebrand krijg ik geen puistjes?"</blockquote>
+    <blockquote>"How was it tested, who approved it?"</blockquote>
+  </div>
+</section>
+
+<footer>
+  <p>Survey run by Parichehr Talebzadeh, 27 October to 7 November 2026. 55 women in the Netherlands took part. Not everyone answered every question, so totals differ per question.</p>
+  <p>The answers stay anonymous. Contact details given for results or interviews are stored separately from the answers and are used only for that.</p>
+</footer>
+
+</div>
+</body>
+</html>
