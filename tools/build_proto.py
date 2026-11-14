@@ -1,5 +1,12 @@
-import json,re
-R='/home/claude/sk2'; A='/home/claude/app_src'
+"""Build the single-file prototype: the real app with tools/app_src/mock.js as its backend, run inside the page.
+
+    python3 tools/build_proto.py [out_dir]     (default: tools/proto/, which git ignores)
+"""
+import json,re,os,sys
+HERE=os.path.dirname(os.path.abspath(__file__))
+R=os.path.dirname(HERE); A=os.path.join(HERE,'app_src')
+OUT=os.path.abspath(sys.argv[1]) if len(sys.argv)>1 else os.path.join(HERE,'proto')
+os.makedirs(OUT,exist_ok=True)
 eng=open(R+'/api/_app/engine.js').read()
 eng=eng.replace('const PRODUCTS = require("../../data/products.json");','const PRODUCTS = PRODUCTS0;')
 eng=eng.replace('const SAMPLES = require("../../data/sample-reviews.json").map((r) => ({ ...r, sample: true }));','const SAMPLES = SAMPLES0.map((r) => ({ ...r, sample: true }));')
@@ -7,7 +14,7 @@ assert 'require(' not in eng
 eng=eng.replace('module.exports = {','return {')
 ai=open(R+'/api/_app/ai.js').read()
 ai=ai.replace('const engine = require("./engine");','')
-ai=ai.replace('module.exports = { chat, identify, hasKey, MEDICAL };','return { SYSTEM, fallback, MEDICAL };')
+ai=ai.replace('module.exports = { chat, identify, hasKey, MEDICAL, fallback, mentioned };','return { SYSTEM, fallback, MEDICAL, extras };')
 assert 'require(' not in ai
 main=open(A+'/main.js').read()
 i=main.index('async function api(route'); j=main.index('function track(name)')
@@ -24,15 +31,17 @@ A.mydata=async()=>{try{const j=await api('me/export');const txt=JSON.stringify(j
 A.protoreset=()=>openSheet('Start over?',`<p style="margin:0">This clears every account, shelf, review and chat in this prototype, so you can test from the very start.</p><button class="btn primary" data-a="protoresetgo">Start over</button><button class="btn line" data-a="closesheet">Cancel</button>`);
 A.protoresetgo=()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('sp-')).forEach(k=>localStorage.removeItem(k));}catch(e){}location.reload();};
 '''
-icons=open('/home/claude/proto_icons.js').read()
+icons=open(A+'/proto_icons.js').read()
 mock=open(A+'/mock.js').read()
 P=open(R+'/data/products.json').read(); SM=open(R+'/data/sample-reviews.json').read()
-js='(function(){"use strict";\n'+icons+main+'\nconst PRODUCTS_DATA='+P+';\nconst SAMPLES_DATA='+SM+';\nconst ENG=(function(PRODUCTS0,SAMPLES0){'+eng+'})(PRODUCTS_DATA,SAMPLES_DATA);\nconst AIX=(function(engine){'+ai+'})(ENG);\n'+mock+'\n'+s1+'\n'+open(A+'/screens2.js').read()+'\n'+s3+'\n'+extra+'\n})();'
-open('/home/claude/proto2/bundle.js','w').write(js)
+TH=open(HERE+'/proto_thumbs.json').read() if os.path.exists(HERE+'/proto_thumbs.json') else '{}'
+# small pack photos, built in so the prototype shows real products without loading anything from the shops
+js='window.SP_THUMBS='+TH+';\n(function(){"use strict";\n'+icons+main+'\nconst PRODUCTS_DATA='+P+';\nconst SAMPLES_DATA='+SM+';\nconst ENG=(function(PRODUCTS0,SAMPLES0){'+eng+'})(PRODUCTS_DATA,SAMPLES_DATA);\nconst AIX=(function(engine){'+ai+'})(ENG);\n'+mock+'\n'+s1+'\n'+open(A+'/screens2.js').read()+'\n'+s3+'\n'+extra+'\n})();'
+open(os.path.join(OUT,'bundle.js'),'w').write(js)
 html=open(R+'/app/index.html').read()
 body=html[html.index('<div class="desk">'):html.index('<script src="app.js">')]
 body=body.replace('<b>Skin Peers</b>','<b>Skin Peers prototype</b>').replace('<span>Open this page on your phone to use the camera.</span>','<span>Runs inside Claude with the real product list and matching. Sample reviews are marked. Me → Start over resets it.</span>')
 css=open(R+'/app/app.css').read()
 out='<title>Skin Peers Prototype</title>\n<meta name="description" content="Clickable prototype of the Skin Peers app.">\n<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">\n<style>\n'+css+'\n</style>\n'+body+'<script>\n'+js.replace('</script','<\\/script')+'\n</script>\n'
-open('/home/claude/proto2/prototype.html','w').write(out)
+open(os.path.join(OUT,'prototype.html'),'w').write(out)
 print(len(out))

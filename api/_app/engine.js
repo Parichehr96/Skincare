@@ -2,6 +2,19 @@
 const PRODUCTS = require("../../data/products.json");
 const SAMPLES = require("../../data/sample-reviews.json").map((r) => ({ ...r, sample: true }));
 const BY_ID = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
+// The catalogue holds every kind of face skincare, but peer reviews, ranking, Matches and the chat's suggestions are
+// open only for sunscreens (cat "sun") and day creams (cat "moist") for now. Everything else (cat "other") can sit on
+// a shelf and gets the ingredient check, the brand's claims and shop ratings.
+const OPEN_CATS = ["sun", "moist"];
+const KINDS = ["sunscreen", "day cream", "night cream", "eye cream", "serum", "cleanser", "toner", "mask", "exfoliant", "other"];
+let RANKABLE = PRODUCTS.filter((p) => OPEN_CATS.includes(p.cat));
+const isOpen = (p) => !!p && OPEN_CATS.includes(p.cat);
+const kindOf = (p) => (p && KINDS.includes(p.kind) ? p.kind : p && p.cat === "sun" ? "sunscreen" : p && p.cat === "moist" ? "day cream" : "other");
+// Tests only: add synthetic products (for example a cat "other" fixture) without touching data/products.json.
+function _addTestProducts(list) {
+  for (const p of list || []) { if (BY_ID[p.id]) continue; PRODUCTS.push(p); BY_ID[p.id] = p; }
+  RANKABLE = PRODUCTS.filter((p) => OPEN_CATS.includes(p.cat));
+}
 
 const AGES = ["18-24", "25-34", "35-44", "45-54", "55+"];
 const BUDGET_MAX = { u10: 10, "10-20": 20, "20-35": 35, any: null };
@@ -149,7 +162,7 @@ function card(p, st, j, simSt) {
   const outside = outsideOf(p);
   const basis = basisOf(st, simSt, outside);
   return {
-    id: p.id, name: p.name, brand: p.brand, cat: p.cat, size: p.size, price: p.price, was: s0.was || null, shop: s0.shop || "",
+    id: p.id, name: p.name, brand: p.brand, image: p.image || null, cat: p.cat, kind: kindOf(p), reviewsOpen: isOpen(p), size: p.size, price: p.price, was: s0.was || null, shop: s0.shop || "",
     shopCount: p.shops.length, spf: p.spf, flags: p.flags, traits: p.traits, shape: p.shape, c: p.c,
     peer: st.peer, all: st.all, view: st.view, breakouts: st.breakouts, samples: st.samples, score: Math.round(j.score * 1000) / 1000, reasons: j.reasons, cautions: j.cautions,
     basis, similar: basis === "similar" || basis === "similar-all" ? { peer: simSt.peer, all: simSt.all, k: simSt.products.length, names: simSt.products.slice(0, 2).map((x) => x.name) } : null,
@@ -158,8 +171,9 @@ function card(p, st, j, simSt) {
   };
 }
 function evaluate(p, by, me) {
-  const st = stats(by[p.id] || [], me);
-  const simSt = st.all.n < PEER_READY ? similarStats(p, by, me) : null;
+  // Shelf-only kinds carry no review numbers, even if a stray review exists.
+  const st = stats(isOpen(p) ? by[p.id] || [] : [], me);
+  const simSt = isOpen(p) && st.all.n < PEER_READY ? similarStats(p, by, me) : null;
   const j = judge(p, st, me, simSt);
   return { st, simSt, j, c: card(p, st, j, simSt) };
 }
@@ -168,7 +182,7 @@ function norm(t) { return String(t || "").toLowerCase().normalize("NFD").replace
 
 function rank(reviews, me, q = {}) {
   const by = groupBy(reviews);
-  let list = PRODUCTS;
+  let list = RANKABLE;
   if (q.cat) list = list.filter((p) => p.cat === q.cat);
   if (q.max) list = list.filter((p) => p.price != null && p.price <= Number(q.max));
   if (q.shop) list = list.filter((p) => p.shops.some((s) => s.shop.toLowerCase() === String(q.shop).toLowerCase()));
@@ -181,10 +195,25 @@ function rank(reviews, me, q = {}) {
   return list.map((p) => evaluate(p, by, me).c).sort((a, b) => b.score - a.score);
 }
 
+// Find products of every kind by name, for scanning, search and the shelf. Not a ranking: open kinds come first by
+// score, then the rest by name. `ids` returns exactly those products.
+function search(reviews, me, q = {}) {
+  const by = groupBy(reviews);
+  let list;
+  if (Array.isArray(q.ids)) list = q.ids.map((id) => BY_ID[id]).filter(Boolean);
+  else {
+    const w = norm(q.q).split(/\s+/).filter(Boolean);
+    list = PRODUCTS.filter((p) => { const n = norm(p.name + " " + p.brand); return w.every((x) => n.includes(x)); });
+  }
+  const cards = list.map((p) => evaluate(p, by, me).c);
+  if (Array.isArray(q.ids)) return cards;
+  return cards.sort((a, b) => (b.reviewsOpen - a.reviewsOpen) || (a.reviewsOpen ? b.score - a.score : a.name.localeCompare(b.name)));
+}
+
 function detail(reviews, me, id, unlocked) {
   const p = BY_ID[id];
   if (!p) return null;
-  const list = reviews.filter((r) => r.p === id);
+  const list = isOpen(p) ? reviews.filter((r) => r.p === id) : [];
   const by = groupBy(reviews);
   const { st, simSt, j, c } = evaluate(p, by, me);
   const f = features(me);
@@ -194,9 +223,9 @@ function detail(reviews, me, id, unlocked) {
     who: [r.g && r.g.type && r.g.type !== "unsure" ? r.g.type[0].toUpperCase() + r.g.type.slice(1) : "", r.g && r.g.age].filter(Boolean).join(", ")
   }));
   const sims = (p.similar || []).map((s) => ({ ...s, q: BY_ID[s.id] })).filter((s) => s.q).slice(0, 4)
-    .map((s) => ({ id: s.id, name: s.q.name, price: s.q.price, same: !!s.same, s: s.s, reviews: (by[s.id] || []).length }));
+    .map((s) => ({ id: s.id, name: s.q.name, price: s.q.price, same: !!s.same, s: s.s, reviews: isOpen(s.q) ? (by[s.id] || []).length : 0 }));
   return { product: { ...c, shops: p.shops, note: p.note, checked: p.checked, ingredients: p.ingredients || null, ingredientsSource: p.ingredientsSource || null,
-    actives: p.actives || [], claims: p.claims || [], external: p.external || [], similarList: sims, similarUsed: simSt ? simSt.products.length : 0 }, stats: st, reviews: unlocked ? shown : shown.slice(0, 2), locked: unlocked ? 0 : Math.max(0, shown.length - 2), totalNotes: shown.length };
+    actives: p.actives || [], hints: p.hints || [], claims: p.claims || [], external: p.external || [], similarList: sims, similarUsed: simSt ? simSt.products.length : 0 }, stats: st, reviews: unlocked ? shown : shown.slice(0, 2), locked: unlocked ? 0 : Math.max(0, shown.length - 2), totalNotes: shown.length };
 }
 
-module.exports = { PRODUCTS, BY_ID, SAMPLES, rank, detail, stats, sim, features, allReviews, BUDGET_MAX, PEER_READY, PEER_SOME, PEER_MIN, BREAK_MIN, SIM_MIN, norm };
+module.exports = { PRODUCTS, BY_ID, SAMPLES, OPEN_CATS, KINDS, isOpen, kindOf, rank, search, detail, _addTestProducts, stats, sim, features, allReviews, BUDGET_MAX, PEER_READY, PEER_SOME, PEER_MIN, BREAK_MIN, SIM_MIN, norm };

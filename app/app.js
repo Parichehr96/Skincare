@@ -61,17 +61,52 @@ const ageLabel=a=>String(a||'').replace('-','–');
 const prof=()=>S.user&&S.user.profile;
 const groupLabel=()=>{const p=prof();return p?`${TYPE_NAME[p.type]||''}, ${ageLabel(p.age)}`:'';};
 const onShelf=pid=>S.shelf.find(x=>x.pid===pid);
+/* Kinds. Reviews, Matches and the chat's picks cover sunscreens and moisturisers (cat sun/moist) for now; every other
+   kind (cat other) can sit on a shelf and gets the ingredient check, the brand's claims and shop ratings. */
+const KIND_PLURAL={'night cream':'night creams','eye cream':'eye creams',serum:'serums',cleanser:'cleansers',toner:'toners',mask:'masks',exfoliant:'exfoliants'};
+const shelfOnly=p=>!!p&&p.cat==='other';
+const reviewable=p=>!!p&&!p.custom&&!shelfOnly(p);
+const kindLabel=p=>p.cat==='sun'?'sunscreen':p.cat==='moist'?'moisturiser':(p.kind&&p.kind!=='other'?p.kind:'face care');
+const cap=t=>t?t[0].toUpperCase()+t.slice(1):'';
+const notOpenLine=p=>`Reviews for ${KIND_PLURAL[p.kind]||'these products'} aren't open yet. You can keep it on your shelf.`;
 
 /* ---------- Pieces ---------- */
-function art(p,w=60,h=72){
+/* Product pictures. A real photo when we have one: the shop's pack photo, or on her own shelf the photo she took herself.
+   Her own photos stay in this browser (localStorage) and are never sent anywhere, so nobody else sees them. */
+const photoKey=()=>'sp-photos-'+(S.user?S.user.id:'x');
+const myPhotos=()=>store.get(photoKey())||{};
+function setMyPhoto(pid,dataUrl){const m=myPhotos();if(dataUrl)m[pid]=dataUrl;else delete m[pid];store.set(photoKey(),m);}
+/* Returns what to show for a product: her own shelf photo, or the shop's full-size pack photo with a tiny built-in
+   thumbnail as the instant placeholder and fallback. The full photo is always the main image, so cards and the
+   product page are sharp; the thumbnail only shows while it loads, or if it can't load at all. */
+function photoOf(p,own){
+ if(!p||!p.id)return null;
+ const mine=own&&myPhotos()[p.id]; if(mine)return {main:mine,own:true};
+ const th=window.SP_THUMBS&&window.SP_THUMBS[p.id];
+ if(p.image)return {main:p.image,ph:th||null};
+ if(th)return {main:th};
+ return null;
+}
+document.addEventListener('error',e=>{const t=e.target;if(!t||!t.classList||!t.classList.contains('pphoto'))return;
+ const fb=t.getAttribute('data-fb');
+ if(fb&&t.src!==fb){t.removeAttribute('data-fb');t.src=fb;return;}   // full photo failed: drop to the thumbnail
+ t.hidden=true;const s=t.nextElementSibling;if(s)s.removeAttribute('hidden');const box=t.parentElement;if(box)box.classList.remove('hasphoto');},true);
+function art(p,w=60,h=72,{own=false,large=false}={}){
+ const ph=photoOf(p,own);
+ if(!ph)return artSvg(p,w,h,false);
+ const bg=ph.ph?` style="background-image:url(${esc(ph.ph)})"`:'';   // blurred thumbnail behind, until the full photo arrives
+ return `<img class="pphoto"${bg} src="${esc(ph.main)}"${ph.ph?` data-fb="${esc(ph.ph)}"`:''} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">${artSvg(p,w,h,true)}`;
+}
+function artSvg(p,w=60,h=72,hidden=false){
  const [b,d]=p.c||['#EEF1EF','#7B8A82']; let g='';
  if(p.shape==='tube') g=`<rect x="15" y="4" width="30" height="6" rx="2.5" fill="${d}" opacity=".35"/><path d="M16 9h28l-3 47H19z" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="22" y="56" width="16" height="15" rx="4" fill="${d}"/><rect x="22" y="22" width="16" height="18" rx="4" fill="#fff" opacity=".7"/><rect x="25" y="27" width="10" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  else if(p.shape==='jar') g=`<rect x="9" y="24" width="42" height="13" rx="5" fill="${d}"/><rect x="7" y="35" width="46" height="31" rx="11" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="18" y="43" width="24" height="14" rx="4" fill="#fff" opacity=".7"/><rect x="22" y="48" width="16" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  else if(p.shape==='pump') g=`<rect x="26" y="4" width="8" height="11" rx="2" fill="${d}"/><rect x="33" y="5" width="12" height="5" rx="2.5" fill="${d}"/><rect x="21" y="14" width="18" height="9" rx="3" fill="${d}"/><rect x="15" y="22" width="30" height="49" rx="10" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="21" y="36" width="18" height="18" rx="4" fill="#fff" opacity=".7"/><rect x="24" y="41" width="12" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  else g=`<rect x="24" y="4" width="12" height="18" rx="5" fill="${d}"/><rect x="18" y="21" width="24" height="50" rx="9" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="22" y="34" width="16" height="20" rx="4" fill="#fff" opacity=".7"/><rect x="25" y="40" width="10" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
- return `<svg width="${w}" height="${h}" viewBox="0 0 60 76" aria-hidden="true">${g}</svg>`;
+ return `<svg width="${w}" height="${h}" viewBox="0 0 60 76" aria-hidden="true"${hidden?' hidden':''}>${g}</svg>`;
 }
-const artBg=p=>`background:${(p.c||['#EEF1EF'])[0]}`;
+const artBg=(p,own)=>photoOf(p,own)?`--artbg:${(p.c||['#EEF1EF'])[0]}`:`background:${(p.c||['#EEF1EF'])[0]}`;
+const artCls=(p,own)=>photoOf(p,own)?' hasphoto':'';
 function dots(yes,total,{size=8,play=false,max=24}={}){
  let n=total,y=yes; if(total>max){n=20;y=Math.round(yes/total*20);}
  let h='';for(let i=0;i<n;i++){h+=`<span class="dot ${i<y?'':'no'}" style="--c:${TONES[(i*3)%8]};--i:${i};--s:${size}px"></span>`;}
@@ -79,6 +114,7 @@ function dots(yes,total,{size=8,play=false,max=24}={}){
 }
 function peerLine(p){
  const b=p.basis;
+ if(shelfOnly(p)) return `<span class="ppeer low">${esc(cap(kindLabel(p)))} · reviews not open yet${p.hasIngredients?' · ingredient check':''}</span>`;
  if(p.peer&&p.peer.n>=5) return `<span class="ppeer">${dots(p.peer.yes,p.peer.n,{size:7})}<span>${p.peer.yes} of ${p.peer.n} women like you would buy again</span><span class="ptotal">${p.all.n} reviews in total</span></span>`;
  if(p.all&&p.all.n>=5) return `<span class="ppeer low">${p.peer&&p.peer.n?`Only ${p.peer.n} from women like you yet · `:''}${p.all.yes} of ${p.all.n} reviewers would buy again</span>`;
  if((b==='similar'||b==='similar-all')&&p.similar){const s=b==='similar'?p.similar.peer:p.similar.all;return `<span class="ppeer low"><span class="srcchip">Similar formula</span>${s.yes} of ${s.n} ${b==='similar'?'women like you':'reviewers'} would buy ${p.similar.k>1?'these':'it'} again</span>`;}
@@ -94,7 +130,7 @@ function metaLine(p){
 }
 function pcard(p,{act='product',reason=true}={}){
  const why=reason&&p.reasons&&p.reasons[0]?`<span class="reason">${IC.check}${esc(p.reasons[0])}</span>`:(reason&&p.cautions&&p.cautions[0]?`<span class="reason warn">${IC.info}${esc(p.cautions[0])}</span>`:'');
- return `<button class="pcard" data-a="${act}" data-id="${esc(p.id)}"><span class="art" style="${artBg(p)}">${art(p,44,54)}</span><span class="meta"><span class="pname">${esc(p.name)}</span><span class="pmeta">${metaLine(p)}</span>${peerLine(p)}${why}</span></button>`;
+ return `<button class="pcard" data-a="${act}" data-id="${esc(p.id)}"><span class="art${artCls(p)}" style="${artBg(p)}">${art(p,44,54)}</span><span class="meta"><span class="pname">${esc(p.name)}</span><span class="pmeta">${metaLine(p)}</span>${peerLine(p)}${why}</span></button>`;
 }
 function hdr(title,{back=false,right='',sub=''}={}){
  return `<header class="hdr ${back?'back':''}">${back?`<button class="iconbtn" data-a="back" aria-label="Back">${IC.back}</button>`:''}<h1>${title}${sub?`<span class="sub" style="display:block;font-family:var(--f-body);font-weight:500">${sub}</span>`:''}</h1>${right}</header>`;
@@ -347,15 +383,38 @@ const STARTERS=['A moisturiser under €20','A sunscreen with no white cast','My
 SCREENS.chat={tab:'chat',label:'Chat',render(){
  return `${hdr('Chat',{sub:'Assistant, not a doctor',right:`<button class="grp" data-a="tab" data-t="me">${esc(groupLabel())}</button>`})}
  <div class="body" id="chatbody"><div class="thread" id="thread">${S.chat.map(m=>msgHTML(m,false)).join('')}</div></div>
- <form class="composer" id="composer"><label for="msg" style="position:absolute;left:-9999px">Message</label><input id="msg" autocomplete="off" maxlength="800" placeholder="Ask anything about skincare"><button class="send" aria-label="Send">${IC.send}</button></form>`;
+ <form class="composer" id="composer"><label for="msg" style="position:absolute;left:-9999px">Message</label><input id="msg" autocomplete="off" maxlength="800" placeholder="${esc(chatHints()[0])}"><button class="send" aria-label="Send">${IC.send}</button></form>`;
 },mount(el,params){
  if(!S.chat.length){S.chat.push({who:'bot',type:'text',text:`Hi! You're matched with women with ${(TYPE_NAME[prof().type]||'').toLowerCase()} skin, aged ${ageLabel(prof().age)}. What are you looking for?`},{who:'bot',type:'chips',chips:STARTERS},{who:'bot',type:'scan'});saveChat();$('#thread').innerHTML=S.chat.map(m=>msgHTML(m,false)).join('');}
  const b=$('#chatbody'); requestAnimationFrame(()=>b.scrollTop=b.scrollHeight);
+ startHints();
  $('#composer').addEventListener('submit',e=>{e.preventDefault();const i=$('#msg');const v=i.value.trim();if(!v)return;i.value='';userSays(v);});
  if(pendingSay){const v=pendingSay;pendingSay=null;setTimeout(()=>userSays(v),350);}
  if(pendingRunout){const id=pendingRunout;pendingRunout=null;setTimeout(()=>runoutMsgs(id),350);}
 }};
 let pendingSay=null,pendingRunout=null,chatBusy=false;
+/* The placeholder suggests what she could ask next: about the product just shown, or from her own profile and shelf. */
+function lastShown(){const r=S.chat.slice(-8);for(let i=r.length-1;i>=0;i--){const m=r[i];if(m.type==='products'&&m.items&&m.items.length)return m.items;}return [];}
+function chatHints(){
+ const p=prof()||{},c=p.concerns||[],shown=lastShown(),asked=S.chat.some(m=>m.who==='me');
+ if(shown.length){const x=shown[0];return [x.flags&&x.flags.fragrance===false?'Does it have alcohol?':'Is it fragrance-free?','Where can I buy it?',x.reviewsOpen===false?"What's in it?":'Will it break me out?','Something cheaper?','Show me another option'];}
+ const mine=(S.shelf||[]).map(x=>S.cache[x.pid]).filter(Boolean)[0];
+ const out=[];
+ if(mine)out.push(`Is my ${mine.brand||'product'} right for me?`);
+ if(c.includes('breakouts'))out.push("A sunscreen that won't break me out");
+ if(p.type==='oily'||p.type==='combination')out.push("A moisturiser that isn't shiny");
+ if(p.type==='dry')out.push('Something for tight, dry cheeks');
+ if(c.includes('sensitivity')||c.includes('redness'))out.push('A fragrance-free sunscreen');
+ out.push(p.budget==='u10'?'A sunscreen under €10':p.budget==='20-35'?'A moisturiser under €30':'A moisturiser under €20','Name a product to check it');
+ if(asked)out.push('Ask a follow-up, or name a product');
+ return out;
+}
+let hintTimer=null;
+function startHints(){
+ clearInterval(hintTimer);let i=0;
+ const tick=()=>{const el=$('#msg');if(!el){clearInterval(hintTimer);return;}if(el.value)return;const h=chatHints();i=i%h.length;el.placeholder=h[i];i++;};
+ tick(); if(!RM) hintTimer=setInterval(tick,4000);
+}
 function msgHTML(m,a){
  const A=a?' anim':'';
  if(m.who==='me') return `<div class="msg me${A}"><div class="bub">${esc(m.text)}</div></div>`;
@@ -372,6 +431,7 @@ function msgHTML(m,a){
 }
 function appendMsgs(list,a=true){const th=$('#thread');list.forEach(m=>{S.chat.push(m);th&&th.insertAdjacentHTML('beforeend',msgHTML(m,a));});saveChat();const b=$('#chatbody');b&&(b.scrollTop=b.scrollHeight);}
 function consumeChips(){S.chat.forEach(m=>{if(m.type==='chips')m.used=true;});document.querySelectorAll('[data-chips]').forEach(x=>x.remove());}
+function chatContext(){return {shown:lastShown().map(x=>x.id).slice(0,3),cat:S.lastCat||null};}
 function convo(){return S.chat.filter(m=>m.type==='text'&&!m.local).map(m=>({role:m.who==='me'?'user':'assistant',text:m.text})).slice(-8);}
 async function userSays(text){
  if(chatBusy) return; chatBusy=true;
@@ -379,7 +439,8 @@ async function userSays(text){
  const th=$('#thread'); th&&th.insertAdjacentHTML('beforeend',`<div class="msg anim" id="typing"><span class="typing"><i></i><i></i><i></i></span></div>`);
  const b=$('#chatbody');b&&(b.scrollTop=b.scrollHeight);
  try{
-  const j=await api('chat',{method:'POST',body:{messages:convo()}});
+  const context=chatContext();
+  const j=await api('chat',{method:'POST',body:{messages:convo(),context}});
   const t=$('#typing');t&&t.remove();
   const out=[{who:'bot',type:'text',text:j.reply}];
   if(j.medical) out.push({who:'bot',type:'safety'});
@@ -387,11 +448,13 @@ async function userSays(text){
   const chips=(j.chips||[]).filter(c=>!/^see all/i.test(c)).slice(0,3); if(j.products&&j.products.length) chips.push('See all matches');
   if(chips.length) out.push({who:'bot',type:'chips',chips});
   for(const m of out){appendMsgs([m]);await new Promise(r=>setTimeout(r,RM?0:220));}
+  startHints();
  }catch(e){const t=$('#typing');t&&t.remove();appendMsgs([{who:'bot',type:'error',local:true,text:e.code==='slow_down'?'That\'s a lot of questions in a short time. Wait a few minutes and ask again.':e.code==='daily_limit'?'The assistant has reached today\'s limit. Try again tomorrow, or browse Matches.':'I couldn\'t answer that just now. Check your connection and try again.'}]);}
  chatBusy=false;
 }
 function chipAction(v){
  if(v==='See all matches'){consumeChips();S.m.cat=S.lastCat||S.m.cat;go('matches',{},'tab');return;}
+ if(/^scan (it|my product)/i.test(v)){consumeChips();A.startscan();return;}
  if(/pause a product|stop a product/i.test(v)){consumeChips();go('shelf',{},'tab');return;}
  if(/^is my sunscreen good/i.test(v)){
   const mine=S.shelf.find(x=>x.status==='using'&&S.cache[x.pid]&&S.cache[x.pid].cat==='sun');
@@ -448,7 +511,7 @@ SCREENS.product={label:'Product',render({id}){
  <div class="body" id="pbody">${p?productTop(p):''}${spinner()}</div>
  <div class="foot" id="pfoot"></div>`;
 },mount(el,{id,view},again){loadProduct(id,view,again);}};
-function productTop(p){return `<div class="pstage" style="${artBg(p)}">${art(p)}</div><div style="display:flex;flex-direction:column;gap:6px"><h2 class="ptitle">${esc(p.name)}</h2><span class="pmeta">${esc([p.size,p.cat==='sun'?'sunscreen':'moisturiser',p.spf?('SPF'+p.spf):''].filter(Boolean).join(', '))}</span></div>`;}
+function productTop(p){return `<div class="pstage${artCls(p)}" style="${artBg(p)}">${art(p,60,72,{large:true})}</div><div style="display:flex;flex-direction:column;gap:6px"><h2 class="ptitle">${esc(p.name)}</h2><span class="pmeta">${esc([p.size,kindLabel(p),p.spf?('SPF'+p.spf):''].filter(Boolean).join(', '))}</span></div>`;}
 async function loadProduct(id,view,again){
  try{
   const d=S.cache['d:'+id]&&again?S.cache['d:'+id]:await api('product',{query:{id}});
@@ -479,13 +542,30 @@ function evidenceCard(p,st){
    <span class="pmeta">This is ${esc(p.outside.source)}'s own star rating, as shown on ${esc(fmtDate(p.outside.date))}. It covers all skin types, and we can't check who rated it, so it doesn't count as "women like you".</span></div>`;
  return `<div class="empty" style="padding:8px"><h3>No reviews yet</h3><span>${p.hasIngredients?'Below is what the ingredient list and the brand say. ':''}Have you used it? Your review would be the first.</span></div>`;
 }
+// Label facts that matter more outside sunscreens and day creams: acids, retinoids, benzoyl peroxide and so on.
+function kindRows(p){
+ const f=p.flags||{}; const list=(k,l)=>Array.isArray(f[k])&&f[k].length?`<div class="kv"><span>${l}</span><b style="font-weight:500;text-align:right">${f[k].map(esc).join(', ')}</b></div>`:'';
+ let h=list('acids','Exfoliating acids');
+ if(p.cat!=='moist') h+=list('retinoids','Retinoids');
+ if(f.benzoylPeroxide) h+=`<div class="kv"><span>Benzoyl peroxide</span><b>Yes</b></div>`;
+ h+=list('azelaic','Azelaic acid')+list('vitaminC','Vitamin C');
+ const sf=f.surfactants;
+ if(p.kind==='cleanser'&&sf&&(sf.strong.length||sf.mild.length)) h+=`<div class="kv"><span>Cleansing agents</span><b style="font-weight:500;text-align:right">${sf.strong.length?`<span style="color:var(--butter-ink)">${sf.strong.map(esc).join(', ')} (strong)</span>${sf.mild.length?', ':''}`:''}${sf.mild.length?`${sf.mild.map(esc).join(', ')} (milder)`:''}</b></div>`;
+ const hints=(p.hints||[]).slice();
+ if(!hints.length&&(f.acids||[]).length) hints.push('Acids and retinoids used together can irritate.');
+ if(hints.length) h+=`<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${hints.map(t=>`<span class="reason warn">${IC.info}${esc(t)}</span>`).join('')}<span class="pmeta">Hints from the ingredient list, not promises: amounts aren't on the label.</span></div>`;
+ return h;
+}
+function notOpenCard(p){
+ return `<div class="note sky" style="flex-direction:column;gap:6px">${IC.info}<span>${esc(notOpenLine(p))}</span><span class="pmeta">Below is what the ingredient list, the brand and the shops say.</span></div>`;
+}
 function productHTML(d,v){
  const p=d.product, st=d.stats; const s=v==='peer'?st.peer:st.all; const f=p.flags||{};
  const small=v==='peer'&&st.peer.n<10; const own=st.all.n>=1;
- const pore=f.poreClogging; const ext=(p.external||[]).filter(e=>!p.outside||e.source!==p.outside.source||p.basis!=='outside');
+ const pore=f.poreClogging; const ext=(p.external||[]).filter(e=>shelfOnly(p)||!p.outside||e.source!==p.outside.source||p.basis!=='outside');
  return `${productTop(p)}
   ${p.reasons.length||p.cautions.length?`<div style="display:flex;flex-direction:column;gap:6px">${p.reasons.map(r=>`<span class="reason">${IC.check}${esc(r)}</span>`).join('')}${p.cautions.map(r=>`<span class="reason warn">${IC.info}${esc(r)}</span>`).join('')}</div>`:''}
-  ${own?`<div class="seg ${v==='all'?'right':''}" role="tablist"><span class="knob"></span><button role="tab" aria-selected="${v==='peer'}" class="${v==='peer'?'on':''}" data-a="pview" data-v="peer">Women like you</button><button role="tab" aria-selected="${v==='all'}" class="${v==='all'?'on':''}" data-a="pview" data-v="all">Everyone</button></div>
+  ${shelfOnly(p)?notOpenCard(p):own?`<div class="seg ${v==='all'?'right':''}" role="tablist"><span class="knob"></span><button role="tab" aria-selected="${v==='peer'}" class="${v==='peer'?'on':''}" data-a="pview" data-v="peer">Women like you</button><button role="tab" aria-selected="${v==='all'}" class="${v==='all'?'on':''}" data-a="pview" data-v="all">Everyone</button></div>
   <div class="stat">
    ${s.n?`${small?`<div class="note mint" style="padding:12px">${IC.info}<span>${st.peer.n?`Only ${st.peer.n} women like you reviewed this so far.`:'No women like you reviewed this yet.'} Switch to Everyone for a fuller picture.</span></div>`:''}
    <div class="big">${s.yes} <small>of ${s.n} would buy again</small></div>${dots(s.yes,s.n,{size:s.n>24?11:13,play:true})}
@@ -495,14 +575,15 @@ function productHTML(d,v){
    ${st.samples?'<span class="samplebadge" style="align-self:flex-start">Includes sample reviews for testing</span>':''}`
    :`<div class="empty" style="padding:8px"><h3>No women like you yet</h3><span>Switch to Everyone to see all reviews.</span></div>`}
   </div>`:evidenceCard(p,st)}
-  ${st.tags.length?`<div style="display:flex;flex-direction:column;gap:8px"><span class="label">What they mention</span><div class="chips">${st.tags.map(([t,c,good])=>`<span class="tag ${good?'':'grey'}">${esc(t)} ${c}</span>`).join('')}</div></div>`:''}
-  ${d.totalNotes?`<button class="btn line" data-a="reviews" data-id="${esc(p.id)}">Read what they wrote (${d.totalNotes})</button>`:''}
+  ${!shelfOnly(p)&&st.tags.length?`<div style="display:flex;flex-direction:column;gap:8px"><span class="label">What they mention</span><div class="chips">${st.tags.map(([t,c,good])=>`<span class="tag ${good?'':'grey'}">${esc(t)} ${c}</span>`).join('')}</div></div>`:''}
+  ${!shelfOnly(p)&&d.totalNotes?`<button class="btn line" data-a="reviews" data-id="${esc(p.id)}">Read what they wrote (${d.totalNotes})</button>`:''}
   <div class="stat" style="gap:0;padding:6px 18px"><span class="label" style="padding-top:10px">From the ingredient list</span>
    ${p.cat==='sun'?`<div class="kv"><span>Filters</span><b>${f.filters?esc(f.filters[0].toUpperCase()+f.filters.slice(1)):'Not listed'}</b></div>`:''}
-   ${flagRow('Fragrance',f.fragrance,false)}${flagRow('Drying alcohol',f.dryingAlcohol,false)}${p.cat==='moist'?flagRow('Retinol',f.retinol,null):flagRow('Tinted',f.tinted,null)}
+   ${flagRow('Fragrance',f.fragrance,false)}${flagRow('Drying alcohol',f.dryingAlcohol,false)}${p.cat==='moist'?flagRow('Retinol',f.retinol,null):p.cat==='sun'?flagRow('Tinted',f.tinted,null):''}
    <div class="kv"><span>On pore-clogging lists</span>${pore==null?'<b style="font-weight:500;color:var(--muted)">Not checked yet</b>':pore.length?`<b style="color:var(--butter-ink);text-align:right">${pore.map(title1).join(', ')}</b>`:'<b style="color:var(--forest)">None found</b>'}</div>
    ${p.actives&&p.actives.length?`<div class="kv"><span>Notable ingredients</span><b style="font-weight:500;text-align:right">${p.actives.map(esc).join(', ')}</b></div>`:''}
-   ${pore&&pore.length?`<p class="pmeta" style="margin:8px 0 0">These ingredients show up on common pore-clogging lists, which come mostly from old lab tests on single ingredients. How a whole product behaves on your skin varies, so check what women like you report too.</p>`:''}
+   ${pore&&pore.length?`<p class="pmeta" style="margin:8px 0 0">These ingredients show up on common pore-clogging lists, which come mostly from old lab tests on single ingredients. How a whole product behaves on your skin varies${shelfOnly(p)?'.':', so check what women like you report too.'}</p>`:''}
+   ${kindRows(p)}
    ${p.ingredients&&p.ingredients.length?`<details class="inci"><summary>Full ingredient list (${p.ingredients.length})</summary><p>${p.ingredients.map(title1).join(', ')}</p></details>`:''}
    <p class="pmeta" style="margin:8px 0 10px">${p.ingredientsSource?`Read from the ingredient list on ${esc(p.ingredientsSource.shop)}'s website, ${esc(fmtDate(p.ingredientsSource.date))}. Brands change formulas, so check the pack.`:`Read from the ingredient list on the shop's website, ${esc(fmtDate(p.checked))}.`}</p></div>
   ${p.claims&&p.claims.length?`<div class="stat" style="gap:8px"><span class="label">What the brand says</span><div class="chips">${p.claims.map(c=>`<span class="tag grey">${esc(c)}</span>`).join('')}</div><span class="pmeta">From the product description. These are the brand's claims, not checked by us or by women here.</span></div>`:''}
@@ -529,10 +610,12 @@ async function addToShelf(pid,extra={}){
 }
 const daysSince=iso=>Math.max(0,(Date.now()-new Date(iso).getTime())/864e5);
 function lifeLeft(it){const p=S.cache[it.pid];const ml=p&&parseFloat(String(p.size||'').replace(',','.'));const perDay=(p&&p.cat==='sun')?1.2:0.6;const days=ml?ml/perDay:60;return Math.max(0,1-daysSince(it.since)/days);}
-function dueCheckin(it){if(it.status!=='using')return null;const d=daysSince(it.since);if(!it.reviewed.early&&d>=5)return'early';if(!it.reviewed.late&&d>=28)return'late';return null;}
+function dueCheckin(it){if(it.status!=='using'||shelfOnly(itemProduct(it)))return null;const d=daysSince(it.since);if(!it.reviewed.early&&d>=5)return'early';if(!it.reviewed.late&&d>=28)return'late';return null;}
 function itemName(it){return it.name||(S.cache[it.pid]&&S.cache[it.pid].name)||it.pid;}
 function itemProduct(it){return S.cache[it.pid]||{id:it.pid,name:it.name||it.pid,cat:it.cat||'moist',shape:'tube',c:['#EEF1EF','#7B8A82'],custom:true};}
-async function ensureCatalogue(){if(S.cache._all)return;const j=await api('products',{query:{limit:'200'}});j.products.forEach(p=>S.cache[p.id]=p);S.cache._all=true;}
+async function ensureCatalogue(){if(!S.cache._all){const j=await api('products',{query:{limit:'200'}});j.products.forEach(p=>S.cache[p.id]=p);S.cache._all=true;}await ensureShelfCards();}
+// Shelf items outside the top of Matches (and every shelf-only kind) are looked up by id.
+async function ensureShelfCards(){const miss=S.shelf.map(x=>x.pid).filter(id=>!S.cache[id]&&!id.startsWith('x-'));if(!miss.length)return;const j=await api('find',{query:{ids:miss.slice(0,100).join(','),limit:'100'}});j.products.forEach(p=>S.cache[p.id]=p);}
 
 /* ---------- Scan ---------- */
 const ZX_URL='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
@@ -562,7 +645,7 @@ SCREENS.scan={label:'Scan your products',render(){
  startCamera(); track('scan_open'); ensureCatalogue().catch(()=>{});
 }};
 let scanAdded=[];
-function scanRow(pid){const it=onShelf(pid)||{pid};const p=itemProduct(it);return `<div class="srow anim"><span class="art" style="${artBg(p)}">${art(p,36,44)}</span><span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span class="pname" style="font-size:14px">${esc(p.name)}</span>${p.custom?'<span class="pmeta">No reviews yet. Yours can be the first.</span>':peerLine(p)}</span></div>`;}
+function scanRow(pid){const it=onShelf(pid)||{pid};const p=itemProduct(it);return `<div class="srow anim"><span class="art${artCls(p,true)}" style="${artBg(p,true)}">${art(p,36,44,{own:true})}</span><span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span class="pname" style="font-size:14px">${esc(p.name)}</span>${p.custom?'<span class="pmeta">No reviews yet. Yours can be the first.</span>':peerLine(p)}</span></div>`;}
 let cam={};let zxP=null;
 function loadZX(){if(window.ZXing)return Promise.resolve(window.ZXing);if(zxP)return zxP;zxP=new Promise(res=>{const sc=document.createElement('script');sc.src=ZX_URL;sc.onload=()=>res(window.ZXing||null);sc.onerror=()=>{zxP=null;res(null);};document.head.appendChild(sc);});return zxP;}
 function zxReader(Z){const h=new Map();const F=Z.BarcodeFormat;h.set(Z.DecodeHintType.POSSIBLE_FORMATS,[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.CODE_128]);h.set(Z.DecodeHintType.TRY_HARDER,true);const mf=new Z.MultiFormatReader();mf.setHints(h);return {decodeCanvas(cv){try{const r=mf.decodeWithState(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(cv))));return r?r.getText():null;}catch(e){return null;}finally{try{mf.reset();}catch(e){}}}};}
@@ -591,11 +674,17 @@ function resumeCamera(delay=1200){const c=cam;setTimeout(()=>{if(cam===c&&c.on){
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCamera();else{const t=top();if(t&&t.name==='scan')startCamera();}});
 function flashVF(){const vf=$('#vf');if(!vf)return;vf.classList.remove('hit');void vf.offsetWidth;vf.classList.add('hit');if(navigator.vibrate){try{navigator.vibrate(30)}catch(e){}}}
 async function barcodeFromImage(file){const url=URL.createObjectURL(file);let code=null;try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url;});const cv=frameCanvas(img,img.naturalWidth,img.naturalHeight,1600);if('BarcodeDetector' in window){try{const d=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']});const r=await d.detect(cv);if(r&&r[0])code=r[0].rawValue;}catch(e){}}if(!code){const Z=await loadZX();if(Z){const rd=zxReader(Z);code=rd.decodeCanvas(cv)||rd.decodeCanvas(frameCanvas(img,img.naturalWidth,img.naturalHeight,900));}}}catch(e){}URL.revokeObjectURL(url);return code;}
-async function decodePhoto(file){vfCap('Reading the barcode…');$('#vfphotonote').textContent='Reading the barcode…';const code=await barcodeFromImage(file);if(!$('#vf'))return;if(!code){$('#vfphotonote').textContent='No barcode found in that photo. Try again closer, with the barcode flat and in focus.';return;}$('#vfphotonote').textContent='Hold the barcode flat, close and sharp.';onCode(code);}
+async function decodePhoto(file){lastShot=null;vfCap('Reading the barcode…');$('#vfphotonote').textContent='Reading the barcode…';const code=await barcodeFromImage(file);if(!$('#vf'))return;if(!code){$('#vfphotonote').textContent='No barcode found in that photo. Try again closer, with the barcode flat and in focus.';return;}$('#vfphotonote').textContent='Hold the barcode flat, close and sharp.';onCode(code);}
+let lastShot=null;
+/* A small copy of her own photo, kept in this browser only, shown on her shelf and nowhere else. */
+async function keepMyPhoto(pid,blob){try{const url=URL.createObjectURL(blob);const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url;});
+ const S0=240,k=Math.max(S0/img.naturalWidth,S0/img.naturalHeight),c=document.createElement('canvas');c.width=c.height=S0;
+ c.getContext('2d').drawImage(img,(S0-img.naturalWidth*k)/2,(S0-img.naturalHeight*k)/2,img.naturalWidth*k,img.naturalHeight*k);URL.revokeObjectURL(url);setMyPhoto(pid,c.toDataURL('image/jpeg',.72));}catch(e){}}
 async function scanFound(pid,extra){
  flashVF();
  if(onShelf(pid)){vfCap('Already on your shelf: '+itemName(onShelf(pid)));resumeCamera(1800);return;}
  try{await addToShelf(pid,extra);}catch(e){vfCap('Couldn\'t save that. Check your connection.');resumeCamera(1800);return;}
+ if(lastShot){await keepMyPhoto(pid,lastShot);lastShot=null;}
  scanAdded.unshift(pid);
  vfCap('Added '+itemName(onShelf(pid)));
  const list=$('#scanlist');list&&list.insertAdjacentHTML('afterbegin',scanRow(pid));
@@ -610,7 +699,7 @@ async function onCode(code){
  let pid=null;
  try{pid=(await api('ean',{query:{code}})).pid;}catch(e){}
  let obfName='';
- if(!pid){try{const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),5000);const r=await fetch(`https://world.openbeautyfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,brands`,{signal:ctl.signal});clearTimeout(tm);if(r.ok){const j=await r.json();if(j&&j.product){obfName=[j.product.brands,j.product.product_name].filter(Boolean).join(' ');pid=matchCatalogue(obfName);if(pid)api('ean',{method:'POST',body:{code,pid}}).catch(()=>{});}}}catch(e){}}
+ if(!pid){try{const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),5000);const r=await fetch(`https://world.openbeautyfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,brands`,{signal:ctl.signal});clearTimeout(tm);if(r.ok){const j=await r.json();if(j&&j.product){obfName=[j.product.brands,j.product.product_name].filter(Boolean).join(' ');pid=matchCatalogue(obfName);if(!pid&&j.product.brands){try{const f=await api('find',{query:{q:String(j.product.brands).split(',')[0].slice(0,40),limit:'100'}});f.products.forEach(p=>S.cache[p.id]=p);pid=matchCatalogue(obfName);}catch(e){}}if(pid)api('ean',{method:'POST',body:{code,pid}}).catch(()=>{});}}}catch(e){}}
  if(!$('#vf'))return;
  if(pid){scanFound(pid);return;}
  vfCap('We don\'t know this barcode yet');
@@ -618,10 +707,10 @@ async function onCode(code){
 }
 function pickProductSheet({title,lead,code,prefill}){
  openSheet(title,`<p style="margin:0">${esc(lead)}</p><label for="uq" class="label">Search our products</label><input id="uq" class="field" placeholder="For example: Nivea" autocomplete="off" value=""><div class="list" id="uqres">${spinner()}</div>
-  <span class="label">Not in the list?</span><form id="uform" style="display:flex;flex-direction:column;gap:8px"><label for="uname" class="label" style="font-weight:500">Type the brand and product name</label><input id="uname" class="field" autocomplete="off" value="${esc(prefill||'')}"><div class="seg" id="ucat" style="margin-top:2px"><span class="knob"></span><button type="button" class="on" data-v="moist">Moisturiser</button><button type="button" data-v="sun">Sunscreen</button></div><button class="btn line" id="ubtn" ${prefill&&prefill.length>2?'':'disabled'}>Add it to my shelf</button></form>`,{onMount(sh){
+  <span class="label">Not in the list?</span><form id="uform" style="display:flex;flex-direction:column;gap:8px"><label for="uname" class="label" style="font-weight:500">Type the brand and product name</label><input id="uname" class="field" autocomplete="off" value="${esc(prefill||'')}"><div class="chips" id="ucat" role="group" aria-label="What kind of product"><button type="button" class="chip sm on" aria-pressed="true" data-v="moist">Moisturiser</button><button type="button" class="chip sm" aria-pressed="false" data-v="sun">Sunscreen</button><button type="button" class="chip sm" aria-pressed="false" data-v="other">Something else</button></div><button class="btn line" id="ubtn" ${prefill&&prefill.length>2?'':'disabled'}>Add it to my shelf</button></form>`,{onMount(sh){
   const q=sh.querySelector('#uq'),r=sh.querySelector('#uqres'),nm=sh.querySelector('#uname'),b=sh.querySelector('#ubtn'),seg=sh.querySelector('#ucat');let cat='moist';
-  seg.addEventListener('click',e=>{const x=e.target.closest('button');if(!x)return;cat=x.dataset.v;seg.classList.toggle('right',cat==='sun');seg.querySelectorAll('button').forEach(y=>y.classList.toggle('on',y===x));});
-  let tm;const draw=async()=>{try{const j=await api('products',{query:{q:q.value.trim(),limit:'6'}});j.products.forEach(p=>S.cache[p.id]=p);r.innerHTML=j.products.map(p=>`<button class="pcard" data-a="pickfound" data-id="${esc(p.id)}" data-code="${esc(code||'')}"><span class="art" style="${artBg(p)}">${art(p,36,44)}</span><span class="meta"><span class="pname" style="font-size:14px">${esc(p.name)}</span><span class="pmeta">${onShelf(p.id)?'On your shelf':'This is it'}</span></span></button>`).join('')||'<p class="pmeta" style="margin:0">Nothing with that name yet. Type it below instead.</p>';}catch(e){r.innerHTML='<p class="pmeta">Couldn\'t search right now.</p>';}};
+  seg.addEventListener('click',e=>{const x=e.target.closest('button');if(!x)return;cat=x.dataset.v;seg.querySelectorAll('button').forEach(y=>{y.classList.toggle('on',y===x);y.setAttribute('aria-pressed',y===x);});});
+  let tm;const draw=async()=>{try{const j=await api('find',{query:{q:q.value.trim(),limit:'8'}});j.products.forEach(p=>S.cache[p.id]=p);r.innerHTML=j.products.map(p=>`<button class="pcard" data-a="pickfound" data-id="${esc(p.id)}" data-code="${esc(code||'')}"><span class="art${artCls(p,true)}" style="${artBg(p,true)}">${art(p,36,44,{own:true})}</span><span class="meta"><span class="pname" style="font-size:14px">${esc(p.name)}</span><span class="pmeta">${onShelf(p.id)?'On your shelf':esc(cap(kindLabel(p)))+(shelfOnly(p)?' · shelf and ingredient check':'')}</span></span></button>`).join('')||'<p class="pmeta" style="margin:0">Nothing with that name yet. Type it below instead.</p>';}catch(e){r.innerHTML='<p class="pmeta">Couldn\'t search right now.</p>';}};
   q.addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(draw,250);});draw();
   nm.addEventListener('input',()=>{b.disabled=nm.value.trim().length<3;});
   sh.querySelector('#uform').addEventListener('submit',e=>{e.preventDefault();const v=nm.value.trim();if(v.length<3)return;const pid='x-'+norm(v).trim().replace(/ +/g,'-').slice(0,50);closeSheet();scanFound(pid,{name:v,cat});});
@@ -633,7 +722,7 @@ function hideShot(){const im=$('#vfshot');if(!im)return;im.hidden=true;const vf=
 function captureFrame(){const v=$('#vfvideo');if(!v||!v.videoWidth)return;flashVF();frameCanvas(v,v.videoWidth,v.videoHeight,1280).toBlob(b=>{if(b)identifyPhoto(b);},'image/jpeg',.88);}
 async function toDataURL(blob){const url=URL.createObjectURL(blob);try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url;});return frameCanvas(img,img.naturalWidth,img.naturalHeight,1280).toDataURL('image/jpeg',.85);}finally{URL.revokeObjectURL(url);}}
 async function identifyPhoto(blob){
- if(idBusy)return;idBusy=true;if(cam)cam.paused=true;
+ if(idBusy)return;idBusy=true;if(cam)cam.paused=true;lastShot=blob;
  const sh=$('#vfshutter');sh&&(sh.hidden=true);showShot(blob);vfCap('Recognising the product…');
  const done=()=>{idBusy=false;hideShot();const s=$('#vfshutter');if(s&&cam.stream)s.hidden=false;vfCap(cam.stream?'Fit the product in the frame, then tap':'');};
  let r;
@@ -645,8 +734,8 @@ async function identifyPhoto(blob){
  if(!r.readable){vfCap('Couldn\'t read a label. Try again with the front of the product filling the frame.');return;}
  const name=[r.brand,r.product].filter(Boolean).join(' ').trim();
  if(r.match&&r.confidence==='high'){scanFound(r.match);return;}
- if(r.match){const p=S.cache[r.match]||{name:r.match};openSheet('Is this your product?',`<div style="display:flex;gap:14px;align-items:center"><span class="art" style="${artBg(p)};width:60px;height:72px;border-radius:18px;display:grid;place-items:center;flex:none">${art(p,44,54)}</span><span style="display:flex;flex-direction:column;gap:2px"><span class="pname">${esc(p.name)}</span>${name?`<span class="pmeta">We read: ${esc(name)}</span>`:''}</span></div><button class="btn primary" data-a="pickfound" data-id="${esc(r.match)}">Yes, add it</button><button class="btn line" data-a="pickother" data-name="${esc(name)}">No, pick another</button>`);return;}
- pickProductSheet({title:r.category==='other'?'Not a face sunscreen or moisturiser':'New to us',lead:(name?`This looks like ${name}. `:'')+(r.category==='other'?'For now we only cover face sunscreen and moisturiser.':'We don\'t have it in our list yet. Add it to your shelf, and your review can be the first.'),prefill:name});
+ if(r.match){const p=S.cache[r.match]||{name:r.match};openSheet('Is this your product?',`<div style="display:flex;gap:14px;align-items:center"><span class="art${artCls(p)}" style="${artBg(p)};width:60px;height:72px;border-radius:18px;display:grid;place-items:center;flex:none">${art(p,44,54)}</span><span style="display:flex;flex-direction:column;gap:2px"><span class="pname">${esc(p.name)}</span>${name?`<span class="pmeta">We read: ${esc(name)}</span>`:''}</span></div><button class="btn primary" data-a="pickfound" data-id="${esc(r.match)}">Yes, add it</button><button class="btn line" data-a="pickother" data-name="${esc(name)}">No, pick another</button>`);return;}
+ pickProductSheet({title:'New to us',lead:(name?`This looks like ${name}. `:'')+(r.category==='other'?'We don\'t have it in our list yet. You can still add it to your shelf. Reviews are open for face sunscreens and moisturisers only for now.':'We don\'t have it in our list yet. Add it to your shelf, and your review can be the first.'),prefill:name});
 }
 
 /* ---------- Shelf ---------- */
@@ -658,8 +747,8 @@ SCREENS.shelf={tab:'shelf',label:'My shelf',render(){
 function shelfHTML(){
  const using=S.shelf.filter(x=>x.status==='using'),stopped=S.shelf.filter(x=>x.status==='stopped');
  const due=using.map(x=>[x,dueCheckin(x)]).find(([,d])=>d);
- const first=!S.user.unlocked&&using.find(x=>!x.reviewed.early&&!itemProduct(x).custom);
- const low=using.find(x=>!itemProduct(x).custom&&lifeLeft(x)<0.15);
+ const first=!S.user.unlocked&&using.find(x=>!x.reviewed.early&&reviewable(itemProduct(x)));
+ const low=using.find(x=>reviewable(itemProduct(x))&&lifeLeft(x)<0.15);
  let h='';
  if(due){const [it,stage]=due;h+=`<div class="note mint" style="flex-direction:column;gap:10px"><span>${stage==='early'?`You've had the ${esc(itemName(it))} for ${Math.floor(daysSince(it.since))} days. First impressions?`:`You've used the ${esc(itemName(it))} for a few weeks now. How is it going?`}</span><button class="btn primary small" data-a="checkin" data-id="${esc(it.pid)}" data-stage="${stage}" style="align-self:flex-start">Quick check-in</button></div>`;}
  else if(first){h+=`<div class="note sky" style="flex-direction:column;gap:10px">${IC.lock}<span>Review one product you use, in three taps, to see every review.</span><button class="btn primary small" data-a="checkin" data-id="${esc(first.pid)}" data-stage="early" style="align-self:flex-start">Review ${esc(itemName(first))}</button></div>`;}
@@ -671,9 +760,9 @@ function shelfHTML(){
 }
 function shelfRow(it){
  const p=itemProduct(it);
- const status=it.status==='stopped'?`Stopped: ${esc(it.reason||'no reason given')}`:it.reviewed.late?'Reviewed after a few weeks':it.reviewed.early?'First impressions shared':`Added ${Math.floor(daysSince(it.since))===0?'today':Math.floor(daysSince(it.since))+' days ago'}`;
+ const status=it.status==='stopped'?`Stopped: ${esc(it.reason||'no reason given')}`:shelfOnly(p)?`${esc(cap(kindLabel(p)))}, added ${Math.floor(daysSince(it.since))===0?'today':Math.floor(daysSince(it.since))+' days ago'}`:it.reviewed.late?'Reviewed after a few weeks':it.reviewed.early?'First impressions shared':`Added ${Math.floor(daysSince(it.since))===0?'today':Math.floor(daysSince(it.since))+' days ago'}`;
  const left=lifeLeft(it);
- return `<button class="srow ${it.status}" data-a="shelfitem" data-id="${esc(it.pid)}"><span class="art" style="${artBg(p)}">${art(p,38,46)}</span><span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span class="pname" style="font-size:14px">${esc(p.name)}</span><span class="pmeta">${status}</span>${it.status==='using'&&!p.custom?`<span class="meter ${left<.15?'low':''}" aria-label="About ${Math.round(left*100)}% left"><i style="width:${Math.round(left*100)}%"></i></span>`:''}</span>${IC.chev}</button>`;
+ return `<button class="srow ${it.status}" data-a="shelfitem" data-id="${esc(it.pid)}"><span class="art${artCls(p,true)}" style="${artBg(p,true)}">${art(p,38,46,{own:true})}</span><span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span class="pname" style="font-size:14px">${esc(p.name)}</span><span class="pmeta">${status}</span>${it.status==='using'&&!p.custom?`<span class="meter ${left<.15?'low':''}" aria-label="About ${Math.round(left*100)}% left"><i style="width:${Math.round(left*100)}%"></i></span>`:''}</span>${IC.chev}</button>`;
 }
 
 /* ---------- Check-in (review) ---------- */
@@ -687,7 +776,7 @@ SCREENS.checkin={label:'Check-in',render({id,stage}){
  const stings=ck.feel.includes('stings');
  return `${hdr(stage==='late'?'After a few weeks':'First impressions',{back:true})}
  <div class="body">
-  <div style="display:flex;gap:12px;align-items:center"><span class="art" style="${artBg(p)};width:52px;height:62px;border-radius:14px;display:grid;place-items:center;flex:none">${art(p,40,48)}</span><span class="pname">${esc(p.name)}</span></div>
+  <div style="display:flex;gap:12px;align-items:center"><span class="art${artCls(p,true)}" style="${artBg(p,true)};width:52px;height:62px;border-radius:14px;display:grid;place-items:center;flex:none">${art(p,40,48,{own:true})}</span><span class="pname">${esc(p.name)}</span></div>
   <p class="q">Would you buy it again?</p><div class="chips">${one('again',[['y','Yes'],['m','Maybe'],['n','No']])}</div>
   <p class="q">How does your skin feel with it?</p><div class="chips">${many('feel',feel)}</div>
   <p class="q">Anything else? <span style="font-weight:400;color:var(--muted)">(optional)</span></p><div class="chips">${many('extra',[['good under makeup','Good under makeup'],['pills','Pills'],['too expensive','Too expensive'],['lasts long','Lasts long']])}</div>
@@ -731,7 +820,7 @@ SCREENS.me={tab:'me',label:'Me',render(){
 }};
 const PRIVACY=`<p style="margin:0">We store your email (to sign you in), your skin details, your shelf and your reviews, on servers in the EU. Your reviews show only your skin type, age group and skin tone, never your name or email.</p>
 <p style="margin:0">Skin concerns are optional and need your OK. You can delete them, or your whole account, any time in Me, and download everything we store.</p>
-<p style="margin:0">To answer your questions and read product photos, we send the question or photo to our AI provider. We don't store your chat or your photos; your chat stays on this device.</p>
+<p style="margin:0">To answer your questions and read product photos, we send the question or photo to our AI provider. We don't store your chat or your photos; your chat stays on this device. A photo you take of a product on your shelf is kept on this phone only, and only you see it.</p>
 <p class="pmeta" style="margin:0">Early version. The full privacy policy follows after legal review.</p>`;
 
 /* ---------- Actions ---------- */
@@ -762,7 +851,7 @@ const A={
  pview:(el)=>{const t=top();t.params.view=el.dataset.v;refresh();},
  reviews:(el)=>reviewsSheet(el.dataset.id),
  whyunlock:()=>{track('why_unlock');openSheet('How reviews work',`<p style="margin:0">Every review here comes from a woman who uses the product. To keep it that way, everyone shares how one product they use works for them before reading all reviews.</p><div class="note sky">${IC.shield}<span>It takes three taps. Only your skin type, age group and skin tone are shown with it, never your name. And it helps the next woman with skin like yours.</span></div><button class="btn primary" data-a="unlockflow">Review a product</button><button class="btn line" data-a="closesheet">Not now</button>`);},
- unlockflow:()=>{closeSheet(true);const x=S.shelf.find(s=>s.status==='using'&&!s.reviewed.early&&!itemProduct(s).custom);if(x)go('checkin',{id:x.pid,stage:'early'});else go('scan');},
+ unlockflow:()=>{closeSheet(true);const x=S.shelf.find(s=>s.status==='using'&&!s.reviewed.early&&reviewable(itemProduct(s)));if(x)go('checkin',{id:x.pid,stage:'early'});else go('scan');},
  have:async(el)=>{el.disabled=true;try{await addToShelf(el.dataset.id);toast('Added to your shelf');$('#pfoot')&&($('#pfoot').innerHTML=productFoot(S.cache[el.dataset.id]));}catch(e){el.disabled=false;toast('Couldn\'t add it. Try again.');}},
  buyout:()=>track('buy_click'),
  buy:(el)=>{const p=S.cache[el.dataset.id];const s=p&&(p.shops||[]).find(x=>x.url);track('runout_rebuy');if(s)window.open(s.url,'_blank','noopener');else go('product',{id:el.dataset.id});},
@@ -773,29 +862,30 @@ const A={
  searchname:()=>pickProductSheet({title:'Search by name',lead:'Find the product you use.'}),
  pickfound:(el)=>{const id=el.dataset.id,code=el.dataset.code;if(code)api('ean',{method:'POST',body:{code,pid:id}}).catch(()=>{});closeSheet();if(top().name==='scan')scanFound(id);else addToShelf(id).then(()=>{toast('Added to your shelf');refresh();}).catch(()=>{});},
  pickother:(el)=>pickProductSheet({title:'Which product is this?',lead:'Pick it from the list, or type its name.',prefill:el.dataset.name}),
- reviewone:()=>{const x=scanAdded.map(onShelf).find(s=>s&&!s.reviewed.early&&!itemProduct(s).custom);if(x)go('checkin',{id:x.pid,stage:'early'});else toast('Products not in our list can be reviewed once we add them');},
- checkin:(el)=>go('checkin',{id:el.dataset.id,stage:el.dataset.stage||'early'}),
+ reviewone:()=>{const x=scanAdded.map(onShelf).find(s=>s&&!s.reviewed.early&&reviewable(itemProduct(s)));if(x)go('checkin',{id:x.pid,stage:'early'});else toast(scanAdded.some(id=>shelfOnly(itemProduct(onShelf(id)||{pid:id})))?'Reviews are open for sunscreens and moisturisers only for now':'Products not in our list can be reviewed once we add them');},
+ checkin:(el)=>{const p=itemProduct(onShelf(el.dataset.id)||{pid:el.dataset.id});if(shelfOnly(p)){toast('Reviews for these aren\'t open yet');return;}go('checkin',{id:el.dataset.id,stage:el.dataset.stage||'early'});},
  shelfitem:(el)=>{const it=onShelf(el.dataset.id);const p=itemProduct(it);const stage=!it.reviewed.early?'early':'late';
-  openSheet(p.name,`${it.status==='using'&&!p.custom?`<button class="btn primary" data-a="checkin" data-id="${esc(it.pid)}" data-stage="${stage}">${stage==='early'?'Share first impressions':(it.reviewed.late?'Update my review':'Review after a few weeks')}</button>`:''}${it.status==='using'?`<button class="btn line" data-a="stopask" data-id="${esc(it.pid)}">I stopped using it</button>`:`<button class="btn line" data-a="restart" data-id="${esc(it.pid)}">I'm using it again</button>`}${p.custom?'':`<button class="btn line" data-a="product" data-id="${esc(it.pid)}">See what women like you think</button>`}<button class="btn line" data-a="remove" data-id="${esc(it.pid)}" style="color:var(--rose-ink)">Remove from my shelf</button>`);},
+  openSheet(p.name,`${shelfOnly(p)?`<p class="pmeta" style="margin:0">${esc(notOpenLine(p))}</p>`:''}${it.status==='using'&&reviewable(p)?`<button class="btn primary" data-a="checkin" data-id="${esc(it.pid)}" data-stage="${stage}">${stage==='early'?'Share first impressions':(it.reviewed.late?'Update my review':'Review after a few weeks')}</button>`:''}${it.status==='using'?`<button class="btn line" data-a="stopask" data-id="${esc(it.pid)}">I stopped using it</button>`:`<button class="btn line" data-a="restart" data-id="${esc(it.pid)}">I'm using it again</button>`}${p.custom?'':`<button class="btn line" data-a="product" data-id="${esc(it.pid)}">${shelfOnly(p)?'See the ingredient check':'See what women like you think'}</button>`}<label class="btn line" for="myphoto-${esc(it.pid)}">${myPhotos()[it.pid]?'Retake my photo':'Use my own photo'}</label><input type="file" accept="image/*" capture="environment" hidden id="myphoto-${esc(it.pid)}" data-pid="${esc(it.pid)}" class="myphotoin">${myPhotos()[it.pid]?`<button class="btn line" data-a="myphotodel" data-id="${esc(it.pid)}">Remove my photo</button>`:''}<p class="pmeta" style="margin:0">Your photo stays on this phone. Only you see it.</p><button class="btn line" data-a="remove" data-id="${esc(it.pid)}" style="color:var(--rose-ink)">Remove from my shelf</button>`);},
+ myphotodel:(el)=>{setMyPhoto(el.dataset.id,null);closeSheet();refresh();},
  stopask:(el)=>{const id=el.dataset.id;openSheet('Why did you stop?',`<div class="chips">${['Stung or burned','Broke me out','Too greasy','Ran out',"Didn't do much",'Too expensive'].map(r=>`<button class="chip" data-a="stop" data-id="${esc(id)}" data-v="${esc(r)}">${esc(r)}</button>`).join('')}</div>`);},
  stop:async(el)=>{const next=S.shelf.map(x=>x.pid===el.dataset.id?{...x,status:'stopped',reason:el.dataset.v.toLowerCase()}:x);closeSheet();try{await saveShelf(next);toast('Moved to stopped using');refresh();}catch(e){toast('Couldn\'t save. Try again.');}},
  restart:async(el)=>{const next=S.shelf.map(x=>x.pid===el.dataset.id?{...x,status:'using',reason:null,since:new Date().toISOString()}:x);closeSheet();try{await saveShelf(next);refresh();}catch(e){}},
- remove:async(el)=>{const next=S.shelf.filter(x=>x.pid!==el.dataset.id);closeSheet();try{await saveShelf(next);toast('Removed from your shelf');refresh();}catch(e){}},
+ remove:async(el)=>{const next=S.shelf.filter(x=>x.pid!==el.dataset.id);closeSheet();try{await saveShelf(next);setMyPhoto(el.dataset.id,null);toast('Removed from your shelf');refresh();}catch(e){}},
  runout:(el)=>{pendingRunout=el.dataset.id;track('runout_switch');go('chat',{},'tab');},
  ck1:(el)=>{ck[el.dataset.k]=el.dataset.v;refresh();},
  ckm:(el)=>{const a=ck[el.dataset.k],v=el.dataset.v;const i=a.indexOf(v);if(i>=0)a.splice(i,1);else{if(v==='no change')a.length=0;else{const j=a.indexOf('no change');j>=0&&a.splice(j,1);}if(v==='white cast'){const k=a.indexOf('no white cast');k>=0&&a.splice(k,1);}if(v==='no white cast'){const k=a.indexOf('white cast');k>=0&&a.splice(k,1);}a.push(v);}refresh();},
  cksave:async(el)=>{el.disabled=true;el.textContent='Saving…';
   try{const j=await api('review',{method:'POST',body:{pid:ck.id,stage:ck.stage,again:ck.again,feel:ck.feel,extra:ck.extra,note:ck.note,stopped:ck.stopped||undefined}});S.shelf=j.shelf;const first=j.firstUnlock;S.user.unlocked=true;Object.keys(S.cache).filter(k=>k.startsWith('d:')).forEach(k=>delete S.cache[k]);ck=null;celebrate(j.helps,first);}
-  catch(e){el.disabled=false;el.textContent='Save review';$('#ckerr').textContent='Couldn\'t save your review. Check your connection and try again.';}},
+  catch(e){el.disabled=false;el.textContent='Save review';$('#ckerr').textContent=e.code==='reviews_not_open'?'Reviews for this kind of product aren\'t open yet. It stays on your shelf.':'Couldn\'t save your review. Check your connection and try again.';}},
  celebratedone:()=>{$('#overlay').innerHTML='';go('shelf',{},'tab');},
  medical:(el,e)=>{e&&e.preventDefault();openSheet('When to see your huisarts',`<p style="margin:0">Stop using a product if it burns, swells your skin, or gives you a rash that spreads. Contact your huisarts if it doesn't settle within a few days.</p><div class="note butter">${IC.alert}<span>Swelling of the face, lips or tongue, or trouble breathing: call 112.</span></div><a class="btn line" href="https://www.thuisarts.nl" target="_blank" rel="noopener">Thuisarts.nl ${IC.ext}</a>`);},
  editskin:()=>{ob=null;go('onboard');},
  toggleremind:async(el)=>{const v=!S.user.reminders;el.setAttribute('aria-checked',v);try{const j=await api('me',{method:'PUT',body:{reminders:v}});S.user=j.user;toast(v?'Nudges on':'Nudges off');}catch(e){el.setAttribute('aria-checked',!v);}},
  mydata:async()=>{try{const j=await api('me/export');const blob=new Blob([JSON.stringify(j,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='skin-peers-my-data.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);toast('Your data is downloading');}catch(e){toast('Couldn\'t get your data. Try again.');}},
  delconcerns:async()=>{try{const j=await api('me',{method:'PUT',body:{deleteConcerns:true}});S.user=j.user;toast('Skin concerns deleted');refresh();}catch(e){toast('Couldn\'t delete them. Try again.');}},
- signout:async()=>{try{await api('auth/logout',{method:'POST'});}catch(e){}store.del(chatKey());S.chat=[];signedOut();},
+ signout:async()=>{try{await api('auth/logout',{method:'POST'});}catch(e){}store.del(chatKey());store.del(photoKey());S.chat=[];signedOut();},
  delacct:()=>openSheet('Delete your account?',`<p style="margin:0">This removes your profile, shelf and reviews for good. You can't undo it.</p><button class="btn primary" style="background:var(--rose-ink)" data-a="delconfirm">Delete my account</button><button class="btn line" data-a="closesheet">Keep my account</button>`),
- delconfirm:async(el)=>{el.disabled=true;el.textContent='Deleting…';try{await api('me',{method:'DELETE'});store.del(chatKey());S.chat=[];closeSheet(true);signedOut();toast('Your account is deleted');}catch(e){el.disabled=false;el.textContent='Delete my account';}},
+ delconfirm:async(el)=>{el.disabled=true;el.textContent='Deleting…';try{await api('me',{method:'DELETE'});store.del(chatKey());store.del(photoKey());S.chat=[];closeSheet(true);signedOut();toast('Your account is deleted');}catch(e){el.disabled=false;el.textContent='Delete my account';}},
  closesheet:()=>{closeSheet();if(cam.on)resumeCamera(300);},
 };
 document.addEventListener('click',e=>{
@@ -827,5 +917,7 @@ async function boot(){
 }
 A.bootretry=()=>boot();
 boot();
+
+document.addEventListener('change',async e=>{const t=e.target;if(!t||!t.classList||!t.classList.contains('myphotoin'))return;const f=t.files&&t.files[0];if(!f)return;await keepMyPhoto(t.dataset.pid,f);closeSheet();refresh();toast('Photo saved on this phone');});
 
 })();

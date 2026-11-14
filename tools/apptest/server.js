@@ -1,6 +1,6 @@
 // Local test harness: in-memory Redis (REST), fake Anthropic, static files and the API function.
 const http=require('http'),fs=require('fs'),path=require('path'),url=require('url');
-const ROOT='/home/claude/sk2';
+const ROOT=path.resolve(__dirname,'../..');
 const kv=new Map(), exp=new Map();
 const alive=k=>{if(exp.has(k)&&exp.get(k)<Date.now()){kv.delete(k);exp.delete(k);}return kv.has(k);};
 function run(c){const [op,...a]=c;const k=a[0];alive(k);
@@ -38,6 +38,8 @@ http.createServer((req,res)=>{let b='';req.on('data',d=>b+=d);req.on('end',()=>{
  res.setHeader('Content-Type','application/json');res.end(JSON.stringify({content:[{type:'text',text}]}));});}).listen(8898);
 Object.assign(process.env,{KV_REST_API_URL:'http://127.0.0.1:8899',KV_REST_API_TOKEN:'t',AUTH_TEST_MODE:'1',EXPORT_KEY:'admin-key-1234567890abc',ANTHROPIC_API_KEY:process.env.NOAI?'':'test',ANTHROPIC_BASE_URL:'http://127.0.0.1:8898'});
 const handler=require(ROOT+'/api/app.js');
+// Tests only: a synthetic shelf-only product (cat "other"), never in data/products.json.
+require(ROOT+'/api/_app/engine.js')._addTestProducts(require('./fixture-other.json'));
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.png':'image/png','.json':'application/json'};
 http.createServer((req,res)=>{const u=url.parse(req.url,true);
  if(u.pathname==='/api/app'){let b='';req.on('data',d=>b+=d);req.on('end',()=>{req.query=u.query;try{req.body=b?JSON.parse(b):undefined;}catch(e){req.body=b;}handler(req,res);});return;}

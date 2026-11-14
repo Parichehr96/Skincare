@@ -11,20 +11,20 @@ function bump(n){DB.stats[n]=(DB.stats[n]||0)+1;}
 let sampleFn=null;
 async function getSample(){if(sampleFn!==null)return sampleFn;try{if(!window.claude||!window.claude.use){sampleFn=false;return false;}const s=await window.claude.use('sample');if(!s){sampleFn=false;return false;}const lim=await s.limits().catch(()=>null);s._images=!!(lim&&lim.images);sampleFn=s;return s;}catch(e){sampleFn=false;return false;}}
 getSample();
-async function aiChat(messages,profile,reviews){
+async function aiChat(messages,profile,reviews,context){
+ const ctx={shown:context&&Array.isArray(context.shown)?context.shown.map(String).filter(id=>ENG.BY_ID[id]).slice(0,3):[],cat:context&&context.cat};
  const last=(messages[messages.length-1]||{}).text||'';
  const cands=[...ENG.rank(reviews,profile,{cat:'sun'}).slice(0,12),...ENG.rank(reviews,profile,{cat:'moist'}).slice(0,12)];
  const s=await getSample(); let out=null,usedAI=false;
  if(s){
-  const turns=[{role:'user',content:AIX.SYSTEM(profile,cands,true)+'\n\nThe conversation so far follows. Answer her last message.'}];
+  const turns=[{role:'user',content:AIX.SYSTEM(profile,cands,true,AIX.extras(messages,ctx,cands,reviews,profile))+'\n\nThe conversation so far follows. Answer her last message.'}];
   messages.slice(-8).forEach(m=>{const role=m.role==='assistant'?'assistant':'user';const t=String(m.text||'').slice(0,1500)||'…';if(turns[turns.length-1].role===role)turns[turns.length-1].content+='\n\n'+t;else turns.push({role,content:t});});
   if(turns[turns.length-1].role!=='user')turns.push({role:'user',content:'(continue)'});
   try{out=await s.json(turns,{modelTier:'quick',cache:false});usedAI=!!out;}catch(e){if(e&&(e.code==='not_granted'||e.code==='sampling_disabled'))sampleFn=false;}
  }
- if(!out||typeof out.reply!=='string') out=AIX.fallback(last,profile,reviews);
- const all=Object.fromEntries(ENG.rank(reviews,profile,{}).map(c=>[c.id,c]));
- const ids=(Array.isArray(out.products)?out.products:[]).map(String).filter(id=>all[id]).slice(0,3);
- return {reply:String(out.reply).slice(0,1200),products:ids.map(id=>all[id]),chips:(Array.isArray(out.chips)?out.chips:[]).map(String).filter(Boolean).slice(0,3),topic:String(out.topic||'other'),medical:!!out.medical||(AIX.MEDICAL.test(last)&&out.topic==='medical'),ai:usedAI};
+ if(!out||typeof out.reply!=='string') out=AIX.fallback(messages,profile,reviews,ctx);
+ const ids=[...new Set((Array.isArray(out.products)?out.products:[]).map(String))].filter(id=>ENG.BY_ID[id]).slice(0,3);
+ return {reply:String(out.reply).slice(0,1200),products:ENG.search(reviews,profile,{ids}),chips:(Array.isArray(out.chips)?out.chips:[]).map(String).filter(Boolean).slice(0,3),topic:String(out.topic||'other'),medical:!!out.medical||(AIX.MEDICAL.test(last)&&out.topic==='medical'),ai:usedAI};
 }
 async function aiIdentify(image){
  const s=await getSample(); if(!s||!s._images) throw new ApiError('ai_not_configured',503);
@@ -48,17 +48,18 @@ async function localApi(route,{method='GET',body={},query={}}={}){
  if(route==='me'&&m==='PUT'){if('profile' in body){const p=cleanProfile(body.profile);if(!p)throw new ApiError('bad_profile',400);if(!user.profile)bump('onboard_done');user.profile=p;}if('seenIntro' in body)user.seenIntro=!!body.seenIntro;if('reminders' in body)user.reminders=!!body.reminders;if(body.deleteConcerns&&user.profile){user.profile.concerns=[];user.profile.concernsConsent=false;}dbSave();return {user:{...user}};}
  if(route==='me'&&m==='DELETE'){DB.reviews=DB.reviews.filter(r=>r.uid!==uid);delete DB.shelves[uid];delete DB.emails[user.email];delete DB.users[uid];Object.keys(DB.sessions).forEach(t=>{if(DB.sessions[t]===uid)delete DB.sessions[t];});dbSave();return {ok:true};}
  if(route==='me/export') return {exportedAt:new Date().toISOString(),account:user,shelf:DB.shelves[uid]||[],reviews:DB.reviews.filter(r=>r.uid===uid),note:'Chat messages are kept only on your device.'};
- if(route==='shelf'&&m==='PUT'){const prev=Object.fromEntries((DB.shelves[uid]||[]).map(x=>[x.pid,x.reviewed]));const seen=new Set();const next=[];for(const it of (body.shelf||[]).slice(0,100)){if(!it||!it.pid||seen.has(it.pid))continue;seen.add(it.pid);const custom=!ENG.BY_ID[it.pid];next.push({pid:it.pid,status:it.status==='stopped'?'stopped':'using',since:it.since||new Date().toISOString(),reason:it.reason||null,name:custom?String(it.name||it.pid).slice(0,120):undefined,cat:custom?(it.cat==='sun'?'sun':'moist'):undefined,reviewed:prev[it.pid]||{early:false,late:false}});if(!prev[it.pid])bump('shelf_add');}DB.shelves[uid]=next;dbSave();return {shelf:next.map(x=>({...x}))};}
+ if(route==='shelf'&&m==='PUT'){const prev=Object.fromEntries((DB.shelves[uid]||[]).map(x=>[x.pid,x.reviewed]));const seen=new Set();const next=[];for(const it of (body.shelf||[]).slice(0,100)){if(!it||!it.pid||seen.has(it.pid))continue;seen.add(it.pid);const custom=!ENG.BY_ID[it.pid];next.push({pid:it.pid,status:it.status==='stopped'?'stopped':'using',since:it.since||new Date().toISOString(),reason:it.reason||null,name:custom?String(it.name||it.pid).slice(0,120):undefined,cat:custom?(['sun','moist','other'].includes(it.cat)?it.cat:'moist'):undefined,reviewed:prev[it.pid]||{early:false,late:false}});if(!prev[it.pid])bump('shelf_add');}DB.shelves[uid]=next;dbSave();return {shelf:next.map(x=>({...x}))};}
  if(route==='products'){const q=query;const list=ENG.rank(reviewsAll(),user.profile,{cat:pickv(q.cat,['sun','moist']),max:q.max?Number(q.max):null,shop:q.shop||null,ff:q.ff==='1',spf:q.spf==='1',nobreak:q.nobreak==='1',q:q.q||null});return {products:list.slice(0,Number(q.limit)||60),count:list.length};}
+ if(route==='find'){const q=query;const ids=q.ids?String(q.ids).split(',').map(x=>x.trim()).filter(Boolean).slice(0,100):null;const list=ENG.search(reviewsAll(),user.profile,ids?{ids}:{q:String(q.q||'').slice(0,60)});return {products:list.slice(0,Math.min(100,Number(q.limit)||20)),count:list.length};}
  if(route==='product'){const d=ENG.detail(reviewsAll(),user.profile,String(query.id||''),user.unlocked);if(!d)throw new ApiError('not_found',404);bump('product_view');return d;}
- if(route==='review'){const pid=String(body.pid||'');if(!ENG.BY_ID[pid])throw new ApiError('unknown_product',400);const a=pickv(body.again,['y','m','n']);if(!a)throw new ApiError('bad_review',400);const s=body.stage==='late'?'l':'e';const p=user.profile;
+ if(route==='review'){const pid=String(body.pid||'');if(!ENG.BY_ID[pid])throw new ApiError('unknown_product',400);if(!ENG.isOpen(ENG.BY_ID[pid]))throw new ApiError('reviews_not_open',400);const a=pickv(body.again,['y','m','n']);if(!a)throw new ApiError('bad_review',400);const s=body.stage==='late'?'l':'e';const p=user.profile;
   DB.reviews=DB.reviews.filter(x=>!(x.uid===uid&&x.p===pid&&x.s===s));
   DB.reviews.push({id:'r_'+rid(),p:pid,a,s,uid,at:new Date().toISOString(),f:[...new Set((body.feel||[]).concat(body.stopped==='broke me out'?['broke out']:[]))].filter(x=>FEEL_.includes(x)),x:(body.extra||[]).filter(x=>EXTRA_.includes(x)),n:String(body.note||'').replace(/\s+/g,' ').trim().slice(0,300),g:{type:p.type,age:p.age,tone:p.tone,sun:p.sun,c:p.concerns||[]}});
   const first=!user.unlocked;user.unlocked=true;const shelf=DB.shelves[uid]||(DB.shelves[uid]=[]);let item=shelf.find(x=>x.pid===pid);if(!item){item={pid,status:'using',since:new Date().toISOString(),reviewed:{early:false,late:false}};shelf.push(item);}item.reviewed={...item.reviewed,[s==='l'?'late':'early']:true};if(body.stopped){item.status='stopped';item.reason=String(body.stopped);}
   bump(s==='l'?'review_late':'review_early');if(first)bump('unlock');dbSave();
   const mine=ENG.features(p);const peers=new Set(DB.reviews.filter(x=>x.uid&&x.uid!==uid&&ENG.sim(mine,x.g)>=ENG.PEER_MIN).map(x=>x.uid)).size;
   return {ok:true,firstUnlock:first,helps:peers,shelf:shelf.map(x=>({...x}))};}
- if(route==='chat'){const msgs=(body.messages||[]).filter(x=>x&&typeof x.text==='string').slice(-8);if(!msgs.length)throw new ApiError('no_message',400);bump('chat');return aiChat(msgs,user.profile,reviewsAll());}
+ if(route==='chat'){const msgs=(body.messages||[]).filter(x=>x&&typeof x.text==='string').slice(-8);if(!msgs.length)throw new ApiError('no_message',400);bump('chat');return aiChat(msgs,user.profile,reviewsAll(),body.context);}
  if(route==='identify'){bump('identify');return aiIdentify(body.image);}
  if(route==='ean'&&m==='GET') return {pid:DB.ean[String(query.code||'')]||null};
  if(route==='ean'&&m==='POST'){if(ENG.BY_ID[body.pid])DB.ean[String(body.code)]=body.pid;dbSave();return {ok:true};}

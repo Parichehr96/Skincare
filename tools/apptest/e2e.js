@@ -1,4 +1,8 @@
-const {chromium}=require('playwright');
+// Ignores two console errors the test causes itself: blocked font requests (ERR_FAILED) and the serum review it sends to check the 400 refusal.
+// Drives the app at http://localhost:8890 (start tools/apptest/server.js first). Screenshots land next to this file.
+const {chromium}=require('playwright');const fs=require('fs'),path=require('path');
+const PHOTO=process.env.PHOTO||path.join(__dirname,'photo.png');
+const fails=[];const check=(ok,msg)=>{console.log((ok?'ok   ':'FAIL ')+msg);if(!ok)fails.push(msg);};
 (async()=>{
 const b=await chromium.launch();const ctx=await b.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,acceptDownloads:true});
 const p=await ctx.newPage();const errs=[];p.on('pageerror',e=>errs.push('PE '+e.message));p.on('console',m=>{if(m.type()==='error')errs.push('C '+m.text())});
@@ -27,7 +31,36 @@ await c('#tab-matches',1800);await shot('15-matches');await c('[data-a=mcat][dat
 await c('.pcard',1800);if(await p.$('[data-a=reviews]')){await c('[data-a=reviews]',800);await shot('17-reviews-unlocked');await c('.sheet [data-a=closesheet]',500);}
 await c('[data-a=back]',800);
 await c('#tab-shelf',1200);await c('[data-a=startscan]',1500);await shot('18-scan');
-await p.setInputFiles('#vfphoto','/tmp/claude-0/-home-claude/bcd12c47-bf47-5978-99fe-e31bd0328e2f/scratchpad/proto/c1.png');await p.waitForTimeout(2500);await shot('19-scan-found');
+if(!fs.existsSync(PHOTO))await p.screenshot({path:PHOTO});// any image: the fake AI ignores the pixels
+await p.setInputFiles('#vfphoto',PHOTO);await p.waitForTimeout(2500);await shot('19-scan-found');
+await c('[data-a=back]',800);
+// A shelf-only kind (synthetic fixture): search finds it, the shelf keeps it, its page has no reviews.
+await c('#tab-shelf',1200);await c('[data-a=startscan]',1500);await c('[data-a=searchname]',900);
+await p.fill('#uq','Testmerk');await p.waitForTimeout(1200);await shot('19b-search-other');
+check(await p.$('[data-a=pickfound][data-id="test-other-glow-serum"]')!==null,'search by name finds a serum');
+await c('[data-a=pickfound][data-id="test-other-glow-serum"]',1200);await c('[data-a=back]',1200);
+await shot('19c-shelf-other');
+check(!(await p.textContent('#shelfbody')).includes('Review Testmerk'),'no review prompt for the serum on the shelf');
+await c('.srow[data-id="test-other-glow-serum"]',900);
+check((await p.textContent('.sheet')).includes("Reviews for serums aren't open yet"),'shelf sheet says reviews are not open');
+check(await p.$('.sheet [data-a=checkin]')===null,'no check-in button for the serum');
+await c('.sheet [data-a=product][data-id="test-other-glow-serum"]',1800);await shot('19d-product-other');
+const ptxt=await p.textContent('#pbody');
+check(ptxt.includes("Reviews for serums aren't open yet. You can keep it on your shelf."),'product page: reviews not open line');
+check(ptxt.includes('Exfoliating acids')&&ptxt.includes('Glycolic acid'),'product page: acids row');
+check(ptxt.includes('can irritate'),'product page: acids and retinoid caution');
+check(ptxt.includes('What the brand says')&&ptxt.includes('Ratings on other sites')&&ptxt.includes('Similar formulas'),'product page: claims, shop ratings, similar formulas');
+check(!ptxt.includes('women like you')&&await p.$('[data-a=reviews]')===null&&await p.$('[data-a=pview]')===null,'product page: no peer block, no reviews');
+await p.evaluate(()=>document.querySelector('#pbody').scrollTop=900);await shot('19e-product-other-lower');
+const apiRes=await p.evaluate(async()=>{const t=JSON.parse(localStorage.getItem('sp-token'));const h={'Content-Type':'application/json',Authorization:'Bearer '+t};
+ const rv=await fetch('/api/app?r=review',{method:'POST',headers:h,body:JSON.stringify({pid:'test-other-glow-serum',again:'y',feel:['hydrated']})});
+ const pr=await (await fetch('/api/app?r=products&limit=2000',{headers:h})).json();
+ const pq=await (await fetch('/api/app?r=products&q=Testmerk',{headers:h})).json();
+ const fd=await (await fetch('/api/app?r=find&q=Testmerk',{headers:h})).json();
+ return {status:rv.status,body:await rv.json(),other:pr.products.filter(x=>x.cat==='other').length,pq:pq.count,fd:fd.products.map(x=>x.kind)};});
+check(apiRes.status===400&&apiRes.body.error==='reviews_not_open','review of a serum is refused with reviews_not_open');
+check(apiRes.other===0&&apiRes.pq===0,'products route never returns other kinds');
+check(apiRes.fd.includes('serum')&&apiRes.fd.includes('cleanser'),'find returns every kind');
 await c('[data-a=back]',800);
 await c('#tab-me',1200);await shot('20-me');
 const [dl]=await Promise.all([p.waitForEvent('download',{timeout:5000}).catch(()=>null),p.click('[data-a=mydata]')]);console.log('download',dl?await dl.suggestedFilename():'none');
@@ -35,4 +68,5 @@ await p.waitForTimeout(600);
 const ap=await ctx.newPage();ap.on('pageerror',e=>errs.push('ADMIN '+e.message));await ap.route('**/fonts.g*/**',r=>r.abort());
 await ap.goto('http://localhost:8890/app/admin.html');await ap.fill('#k','admin-key-1234567890abc');await ap.click('.gate button');await ap.waitForTimeout(1200);await ap.screenshot({path:__dirname+'/21-admin.png',fullPage:true});
 await c('[data-a=delacct]',600);await c('[data-a=delconfirm]',1500);await shot('22-after-delete');
-console.log('ERRORS',JSON.stringify(errs,null,1));await b.close();})();
+// Also ignore product-photo loads that fail in the test sandbox: the cards point at the shops' own image CDNs, which this environment can't reach (ERR_TUNNEL / ERR_NAME / ERR_CONNECTION / "Failed to load resource").
+const EXPECTED=[/net::ERR_FAILED/,/status of 400/,/ERR_TUNNEL_CONNECTION_FAILED/,/ERR_NAME_NOT_RESOLVED/,/ERR_CONNECTION/,/Failed to load resource/];const real=errs.filter(e=>!EXPECTED.some(r=>r.test(e)));console.log('ERRORS',JSON.stringify(real,null,1));console.log(fails.length?fails.length+' checks failed':'all checks passed');await b.close();process.exit(fails.length||real.length?1:0);})();
