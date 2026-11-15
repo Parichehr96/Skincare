@@ -8,7 +8,7 @@ function provider() {
 async function sendCode(email, code) {
   const subject = `${code} is your Skin Peers code`;
   const text = `Your sign-in code is ${code}.\n\nIt works for 10 minutes. If you didn't ask for it, you can ignore this email.\n\nSkin Peers`;
-  const html = `<div style="font-family:Arial,sans-serif;font-size:16px;color:#15241C"><p>Your sign-in code is</p><p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:8px 0 16px">${code}</p><p style="color:#53645B">It works for 10 minutes. If you didn't ask for it, you can ignore this email.</p></div>`;
+  const html = `<div style="font-family:Arial,sans-serif;font-size:16px;color:#1E1A17"><p>Your sign-in code is</p><p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:8px 0 16px">${code}</p><p style="color:#6B6560">It works for 10 minutes. If you didn't ask for it, you can ignore this email.</p></div>`;
   const p = provider();
   if (p === "resend") {
     const r = await fetch("https://api.resend.com/emails", {

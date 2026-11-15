@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Figtree:wght@400;600;700&display=swap">
 <style>
-:root{--bg:#F4F8F5;--paper:#fff;--ink:#15241C;--muted:#53645B;--line:#E0E8E2;--forest:#1F4D3A;--mint:#CDEBD8;--mint-soft:#E9F6EE;--sky:#DCEBF7;--butter:#FBEFD3;--butter-ink:#6A4A10;--rose-ink:#8E2C1C;
+:root{--bg:#F6F6F6;--paper:#fff;--ink:#1E1A17;--muted:#6B6560;--line:#ECE7E2;--sand:#DCBA9F;--sand-soft:#EDD0B2;--sand-tint:#FAF1E8;--bronze:#B88E67;--bronze-ink:#7A5A40;--charcoal:#3A3A3A;--off:#D9D4CF;--mint:#D8F9D9;--mint-ink:#1F5A2E;--peach:#FAE6D1;--peach-ink:#6B4A2E;--rose-ink:#8E2C1C;
 --fd:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;--fb:"Figtree","Avenir Next",system-ui,sans-serif}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--fb)}
@@ -18,7 +18,7 @@ h1{font-size:28px}h2{font-size:19px}
 .sub{color:var(--muted);font-size:14px}
 .top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
 .btn{min-height:40px;padding:0 16px;border-radius:99px;border:1.5px solid var(--line);background:var(--paper);font:inherit;font-weight:700;cursor:pointer;color:var(--ink)}
-.btn.primary{background:var(--forest);border-color:var(--forest);color:#fff}
+.btn.primary{background:var(--sand);border-color:var(--sand);color:var(--ink)}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 .kpi{background:var(--paper);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:4px}
 .kpi .k{font-size:13px;color:var(--muted);font-weight:700}
@@ -29,21 +29,21 @@ h1{font-size:28px}h2{font-size:19px}
 .bars{display:flex;flex-direction:column;gap:8px}
 .bar{display:grid;grid-template-columns:minmax(110px,38%) 1fr 44px;gap:10px;align-items:center;font-size:14px}
 .bar span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.track{height:12px;background:var(--mint-soft);border-radius:99px;overflow:hidden}
-.track i{display:block;height:100%;background:var(--forest);border-radius:99px}
+.track{height:12px;background:var(--line);border-radius:99px;overflow:hidden}
+.track i{display:block;height:100%;background:var(--bronze);border-radius:99px}
 .bar b{text-align:right;font-variant-numeric:tabular-nums}
-.funnel .track i{background:#2B6650}
+.funnel .track i{background:var(--sand)}
 .empty{color:var(--muted);font-size:14px}
 .gate{max-width:380px;margin:12vh auto;background:var(--paper);border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:12px}
 .gate input{min-height:48px;border-radius:14px;border:1.5px solid var(--line);padding:0 14px;font:inherit}
 .err{color:var(--rose-ink);font-weight:700;font-size:14px;margin:0}.err:empty{display:none}
-.note{background:var(--butter);color:var(--butter-ink);border-radius:16px;padding:12px 14px;font-size:14px}
+.note{background:var(--peach);color:var(--peach-ink);border-radius:16px;padding:12px 14px;font-size:14px}
 .status{display:flex;flex-wrap:wrap;gap:8px}
-.pill{border-radius:99px;padding:4px 12px;font-size:13px;font-weight:700;background:var(--mint-soft);color:var(--forest)}
-.pill.off{background:var(--butter);color:var(--butter-ink)}
+.pill{border-radius:99px;padding:4px 12px;font-size:13px;font-weight:700;background:var(--mint);color:var(--mint-ink)}
+.pill.off{background:var(--peach);color:var(--peach-ink)}
 .switch{display:flex;gap:10px;align-items:center;font-size:14px}
 svg text{font-family:var(--fb)}
-:focus-visible{outline:3px solid #1F4A6B;outline-offset:2px}
+:focus-visible{outline:3px solid var(--charcoal);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -64,9 +64,9 @@ function bars(obj,{order,labels={},cls=''}={}){const ent=order?order.filter(k=>o
 function daily(days){
  const W=760,H=200,l=36,b=28,t=16; const vals=days.map(d=>(d.chat||0)); const act=days.map(d=>(d.signup||0)+(d.signin||0)); const rev=days.map(d=>(d.review_early||0)+(d.review_late||0));
  const max=Math.max(1,...vals,...act,...rev); const bw=(W-l-8)/days.length; const y=v=>H-b-(v/max)*(H-b-t);
- const grid=[0,.5,1].map(f=>`<line x1="${l}" x2="${W-8}" y1="${y(max*f)}" y2="${y(max*f)}" stroke="#E0E8E2"/><text x="${l-6}" y="${y(max*f)+4}" text-anchor="end" font-size="11" fill="#53645B">${Math.round(max*f)}</text>`).join('');
- const g=days.map((d,i)=>{const x=l+i*bw;return `<rect x="${x+bw*.12}" y="${y(vals[i])}" width="${bw*.26}" height="${H-b-y(vals[i])}" fill="#1F4D3A" rx="2"><title>${d.d}: ${vals[i]} chat questions</title></rect><rect x="${x+bw*.4}" y="${y(rev[i])}" width="${bw*.26}" height="${H-b-y(rev[i])}" fill="#7FB59A" rx="2"><title>${d.d}: ${rev[i]} reviews</title></rect><rect x="${x+bw*.68}" y="${y(act[i])}" width="${bw*.2}" height="${H-b-y(act[i])}" fill="#C8D3CC" rx="2"><title>${d.d}: ${act[i]} sign-ins</title></rect>${i%5===0?`<text x="${x+bw/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="#53645B">${d.d.slice(5)}</text>`:''}`;}).join('');
- return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Daily chat questions, reviews and sign-ins, last 30 days">${grid}${g}</svg><div class="status"><span class="pill">■ Chat questions</span><span class="pill" style="background:#E3F1E9;color:#2B6650">■ Reviews</span><span class="pill" style="background:#EEF1EF;color:#53645B">■ Sign-ins</span></div>`;
+ const grid=[0,.5,1].map(f=>`<line x1="${l}" x2="${W-8}" y1="${y(max*f)}" y2="${y(max*f)}" stroke="#ECE7E2"/><text x="${l-6}" y="${y(max*f)+4}" text-anchor="end" font-size="11" fill="#6B6560">${Math.round(max*f)}</text>`).join('');
+ const g=days.map((d,i)=>{const x=l+i*bw;return `<rect x="${x+bw*.12}" y="${y(vals[i])}" width="${bw*.26}" height="${H-b-y(vals[i])}" fill="#B88E67" rx="2"><title>${d.d}: ${vals[i]} chat questions</title></rect><rect x="${x+bw*.4}" y="${y(rev[i])}" width="${bw*.26}" height="${H-b-y(rev[i])}" fill="#DCBA9F" rx="2"><title>${d.d}: ${rev[i]} reviews</title></rect><rect x="${x+bw*.68}" y="${y(act[i])}" width="${bw*.2}" height="${H-b-y(act[i])}" fill="#D9D4CF" rx="2"><title>${d.d}: ${act[i]} sign-ins</title></rect>${i%5===0?`<text x="${x+bw/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="#6B6560">${d.d.slice(5)}</text>`:''}`;}).join('');
+ return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Daily chat questions, reviews and sign-ins, last 30 days">${grid}${g}</svg><div class="status"><span class="pill" style="background:#F0EEEC;color:#7A5A40"><span style="color:#B88E67">■</span> Chat questions</span><span class="pill" style="background:#FAF1E8;color:#7A5A40"><span style="color:#DCBA9F">■</span> Reviews</span><span class="pill" style="background:#F0EEEC;color:#6B6560"><span style="color:#D9D4CF">■</span> Sign-ins</span></div>`;
 }
 function render(d){
  const T=d.totals||{};
