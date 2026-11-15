@@ -42,8 +42,8 @@ function msgHTML(m,a){
   case 'text': return `<div class="msg${A}"><div class="bub">${esc(m.text)}</div></div>`;
   case 'products': return `<div class="msg wide${A}"><div class="list">${(m.items||[]).map(p=>pcard(p)).join('')}</div></div>`;
   case 'chips': return m.used?'':`<div class="chips${A}" data-chips>${m.chips.map(c=>`<button class="chip" data-a="chip" data-v="${esc(c)}">${esc(c)}</button>`).join('')}</div>`;
-  case 'scan': return `<div class="msg wide${A}"><div class="note sky" style="align-items:center"><span style="flex:1">Scan what you use now, and I'll show you what women like you think of it.</span><button class="btn primary small" data-a="startscan">${IC.scan}Scan</button></div></div>`;
-  case 'safety': return `<div class="msg wide${A}"><div class="stat" style="gap:8px"><span style="font-weight:700;font-size:15px">Where to go</span><a href="https://www.thuisarts.nl" target="_blank" rel="noopener" style="font-weight:600;display:inline-flex;gap:6px;align-items:center">Thuisarts.nl: information on skin complaints ${IC.ext}</a><span style="font-size:14px">Call your huisarts. Swelling of the face or trouble breathing: call 112.</span></div><div class="note butter">${IC.shield}<span>What you write about symptoms isn't saved to your profile.</span></div></div>`;
+  case 'scan': return `<div class="msg wide${A}"><div class="note lilac" style="align-items:center"><span style="flex:1">Scan what you use now, and I'll show you what women like you think of it.</span><button class="btn primary small" data-a="startscan">${IC.scan}Scan</button></div></div>`;
+  case 'safety': return `<div class="msg wide${A}"><div class="stat" style="gap:8px"><span style="font-weight:700;font-size:15px">Where to go</span><a href="https://www.thuisarts.nl" target="_blank" rel="noopener" style="font-weight:600;display:inline-flex;gap:6px;align-items:center">Thuisarts.nl: information on skin complaints ${IC.ext}</a><span style="font-size:14px">Call your huisarts. Swelling of the face or trouble breathing: call 112.</span></div><div class="note peach">${IC.shield}<span>What you write about symptoms isn't saved to your profile.</span></div></div>`;
   case 'action': return `<div class="msg wide${A}"><button class="btn ${m.style||'soft'} small" data-a="${esc(m.act)}" data-id="${esc(m.id||'')}">${esc(m.label)}</button></div>`;
   case 'error': return `<div class="msg${A}"><div class="bub" style="background:var(--rose);color:var(--rose-ink)">${esc(m.text)}</div></div>`;
  }
@@ -145,10 +145,10 @@ function brkLine(b){
  if(!b||!b.of) return '';
  const who=b.who==='peer'?'women like you':'reviewers';
  if(b.of<10) return `<div class="kv"><span>Breakouts</span><b style="font-weight:500;color:var(--muted)">Too few reviews to say</b></div>`;
- const r=b.n/b.of; const col=r>=.15?'var(--butter-ink)':r<=.06?'var(--forest)':'var(--ink)';
+ const r=b.n/b.of; const col=r>=.15?'var(--rose-ink)':r<=.06?'var(--mint-ink)':'var(--ink)';
  return `<div class="kv"><span>Said it broke them out</span><b style="color:${col}">${b.n} of ${b.of} ${who}</b></div>`;
 }
-function flagRow(label,v,good){const txt=v===true?'Yes':v===false?'No':'Not listed';const ok=v==null||good==null?'':((v===good)?' style="color:var(--forest)"':' style="color:var(--butter-ink)"');return `<div class="kv"><span>${label}</span><b${ok}>${txt}</b></div>`;}
+function flagRow(label,v,good){const txt=v===true?'Yes':v===false?'No':'Not listed';const ok=v==null||good==null?'':((v===good)?' style="color:var(--mint-ink)"':' style="color:var(--rose-ink)"');return `<div class="kv"><span>${label}</span><b${ok}>${txt}</b></div>`;}
 function title1(t){return esc(/[a-z]/.test(t)?t:t.toLowerCase().replace(/(^|[\s\-/(])([a-z])/g,(m,x,y)=>x+y.toUpperCase()));}
 function evidenceCard(p,st){
  const b=p.basis;
@@ -170,14 +170,14 @@ function kindRows(p){
  if(f.benzoylPeroxide) h+=`<div class="kv"><span>Benzoyl peroxide</span><b>Yes</b></div>`;
  h+=list('azelaic','Azelaic acid')+list('vitaminC','Vitamin C');
  const sf=f.surfactants;
- if(p.kind==='cleanser'&&sf&&(sf.strong.length||sf.mild.length)) h+=`<div class="kv"><span>Cleansing agents</span><b style="font-weight:500;text-align:right">${sf.strong.length?`<span style="color:var(--butter-ink)">${sf.strong.map(esc).join(', ')} (strong)</span>${sf.mild.length?', ':''}`:''}${sf.mild.length?`${sf.mild.map(esc).join(', ')} (milder)`:''}</b></div>`;
+ if(p.kind==='cleanser'&&sf&&(sf.strong.length||sf.mild.length)) h+=`<div class="kv"><span>Cleansing agents</span><b style="font-weight:500;text-align:right">${sf.strong.length?`<span style="color:var(--rose-ink)">${sf.strong.map(esc).join(', ')} (strong)</span>${sf.mild.length?', ':''}`:''}${sf.mild.length?`${sf.mild.map(esc).join(', ')} (milder)`:''}</b></div>`;
  const hints=(p.hints||[]).slice();
  if(!hints.length&&(f.acids||[]).length) hints.push('Acids and retinoids used together can irritate.');
  if(hints.length) h+=`<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${hints.map(t=>`<span class="reason warn">${IC.info}${esc(t)}</span>`).join('')}<span class="pmeta">Hints from the ingredient list, not promises: amounts aren't on the label.</span></div>`;
  return h;
 }
 function notOpenCard(p){
- return `<div class="note sky" style="flex-direction:column;gap:6px">${IC.info}<span>${esc(notOpenLine(p))}</span><span class="pmeta">Below is what the ingredient list, the brand and the shops say.</span></div>`;
+ return `<div class="note lilac" style="flex-direction:column;gap:6px">${IC.info}<span>${esc(notOpenLine(p))}</span><span class="pmeta">Below is what the ingredient list, the brand and the shops say.</span></div>`;
 }
 function productHTML(d,v){
  const p=d.product, st=d.stats; const s=v==='peer'?st.peer:st.all; const f=p.flags||{};
@@ -200,7 +200,7 @@ function productHTML(d,v){
   <div class="stat" style="gap:0;padding:6px 18px"><span class="label" style="padding-top:10px">From the ingredient list</span>
    ${p.cat==='sun'?`<div class="kv"><span>Filters</span><b>${f.filters?esc(f.filters[0].toUpperCase()+f.filters.slice(1)):'Not listed'}</b></div>`:''}
    ${flagRow('Fragrance',f.fragrance,false)}${flagRow('Drying alcohol',f.dryingAlcohol,false)}${p.cat==='moist'?flagRow('Retinol',f.retinol,null):p.cat==='sun'?flagRow('Tinted',f.tinted,null):''}
-   <div class="kv"><span>On pore-clogging lists</span>${pore==null?'<b style="font-weight:500;color:var(--muted)">Not checked yet</b>':pore.length?`<b style="color:var(--butter-ink);text-align:right">${pore.map(title1).join(', ')}</b>`:'<b style="color:var(--forest)">None found</b>'}</div>
+   <div class="kv"><span>On pore-clogging lists</span>${pore==null?'<b style="font-weight:500;color:var(--muted)">Not checked yet</b>':pore.length?`<b style="color:var(--rose-ink);text-align:right">${pore.map(title1).join(', ')}</b>`:'<b style="color:var(--mint-ink)">None found</b>'}</div>
    ${p.actives&&p.actives.length?`<div class="kv"><span>Notable ingredients</span><b style="font-weight:500;text-align:right">${p.actives.map(esc).join(', ')}</b></div>`:''}
    ${pore&&pore.length?`<p class="pmeta" style="margin:8px 0 0">These ingredients show up on common pore-clogging lists, which come mostly from old lab tests on single ingredients. How a whole product behaves on your skin varies${shelfOnly(p)?'.':', so check what women like you report too.'}</p>`:''}
    ${kindRows(p)}
@@ -209,7 +209,7 @@ function productHTML(d,v){
   ${p.claims&&p.claims.length?`<div class="stat" style="gap:8px"><span class="label">What the brand says</span><div class="chips">${p.claims.map(c=>`<span class="tag grey">${esc(c)}</span>`).join('')}</div><span class="pmeta">From the product description. These are the brand's claims, not checked by us or by women here.</span></div>`:''}
   ${ext.length?`<div class="stat" style="gap:0;padding:6px 18px"><span class="label" style="padding-top:10px">Ratings on other sites</span>${ext.map(e=>`<div class="kv"><span>${esc(e.source)}</span><b>${String(e.rating).replace('.',',')} out of 5 · ${e.n} ratings</b></div>`).join('')}<p class="pmeta" style="margin:8px 0 10px">The shops' own star ratings, all skin types, as shown on ${esc(fmtDate(ext[0].date))}. We don't copy their reviews.</p></div>`:''}
   ${p.similarList&&p.similarList.length?`<div class="stat" style="gap:8px"><span class="label">Similar formulas</span>${p.similarList.map(x=>`<button class="simrow" data-a="product" data-id="${esc(x.id)}"><span>${esc(x.name)}</span><span class="pmeta">${x.same?'Same formula':'Very similar ingredients'}${x.price!=null?' · '+eur(x.price):''}${x.reviews?' · '+x.reviews+' reviews':''}</span></button>`).join('')}<span class="pmeta">Matched on the ingredient list: the same ingredients in nearly the same order.</span></div>`:''}
-  <div class="note butter">${IC.info}<span><b>Independent tests.</b> None on file for this product yet. We're adding independent tests as we find them.</span></div>
+  <div class="note peach">${IC.info}<span><b>Independent tests.</b> None on file for this product yet. We're adding independent tests as we find them.</span></div>
   <div class="stat" style="gap:0;padding:6px 18px"><span class="label" style="padding-top:10px">Where to buy</span>${(p.shops||[]).map((s,i)=>`<div class="shoprow"><span>${esc(s.shop)}${s.online===false?' <span class="pmeta">(in shops only)</span>':''}</span><span class="price">${s.price!=null?eur(s.price):''}${s.was?`<s>${eur(s.was)}</s>`:''}</span></div>`).join('')}</div>
   <p class="fine" style="margin:0">Prices as shown on ${esc(fmtDate(p.checked))} and may have changed. No shop or brand pays for its place here.</p>`;
 }
@@ -218,6 +218,6 @@ function fmtDate(iso){try{return new Date(iso+'T12:00:00').toLocaleDateString('e
 function reviewsSheet(id){
  const d=S.cache['d:'+id]; if(!d) return;
  const items=d.reviews.map(r=>`<div class="stat" style="gap:6px;padding:14px 16px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span class="tag ${r.again==='n'?'grey':''}">${r.again==='y'?'Would buy again':r.again==='m'?'Maybe':'Wouldn\'t buy again'}</span><span class="pmeta">${esc(r.who)}${r.like?', like you':''}${r.stage==='l'?', 3+ weeks':''}</span></div><span>${esc(r.note)}</span>${r.sample?'<span class="samplebadge" style="align-self:flex-start">Sample review</span>':''}</div>`).join('');
- const lock=d.locked?`<div class="note sky" style="flex-direction:column;gap:10px">${IC.lock}<span>These reviews come from women like you. Share how one product you use works for you (3 taps), and you'll see all ${d.totalNotes} of them.</span><div class="row" style="align-self:flex-start"><button class="btn primary small" data-a="unlockflow">Review a product</button><button class="btn line small" data-a="whyunlock">Why?</button></div></div>`:'';
+ const lock=d.locked?`<div class="note lilac" style="flex-direction:column;gap:10px">${IC.lock}<span>These reviews come from women like you. Share how one product you use works for you (3 taps), and you'll see all ${d.totalNotes} of them.</span><div class="row" style="align-self:flex-start"><button class="btn primary small" data-a="unlockflow">Review a product</button><button class="btn line small" data-a="whyunlock">Why?</button></div></div>`:'';
  openSheet('What they wrote',items+lock);
 }

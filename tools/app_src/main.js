@@ -45,15 +45,19 @@ const cap=t=>t?t[0].toUpperCase()+t.slice(1):'';
 const notOpenLine=p=>`Reviews for ${KIND_PLURAL[p.kind]||'these products'} aren't open yet. You can keep it on your shelf.`;
 
 /* ---------- Pieces ---------- */
+// Packaging tints: each product keeps a stable tint (picked from its stored colour pair) from the sand and pastel palette.
+const PACK=[['#FBEEE0','#8A5F3C'],['#FAF1E8','#7A5A40'],['#FAE3E3','#8E4A3C'],['#F1E6FC','#5E4A80'],['#E9FBEA','#2E6B3C'],['#F0EEEC','#5A5550'],['#F4E2CF','#7A5A40'],['#F7EDF7','#7A4E6E']];
+const PACK_OF={'#EEF5EF':4,'#F6F1E8':1,'#EEF1F6':5,'#F7EEF0':2,'#F2F0F7':3,'#EEF6F6':7,'#FBF4E6':0,'#F1F1EE':6};
+function pack(p){if(!p.c)return ['#F1EEEB','#7A736C'];let i=PACK_OF[p.c[0]];if(i==null){i=0;for(const ch of p.c[0]+p.c[1])i=(i*31+ch.charCodeAt(0))>>>0;}return PACK[i%PACK.length];}
 function art(p,w=60,h=72){
- const [b,d]=p.c||['#EEF1EF','#7B8A82']; let g='';
+ const [b,d]=pack(p); let g='';
  if(p.shape==='tube') g=`<rect x="15" y="4" width="30" height="6" rx="2.5" fill="${d}" opacity=".35"/><path d="M16 9h28l-3 47H19z" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="22" y="56" width="16" height="15" rx="4" fill="${d}"/><rect x="22" y="22" width="16" height="18" rx="4" fill="#fff" opacity=".7"/><rect x="25" y="27" width="10" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  else if(p.shape==='jar') g=`<rect x="9" y="24" width="42" height="13" rx="5" fill="${d}"/><rect x="7" y="35" width="46" height="31" rx="11" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="18" y="43" width="24" height="14" rx="4" fill="#fff" opacity=".7"/><rect x="22" y="48" width="16" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  else if(p.shape==='pump') g=`<rect x="26" y="4" width="8" height="11" rx="2" fill="${d}"/><rect x="33" y="5" width="12" height="5" rx="2.5" fill="${d}"/><rect x="21" y="14" width="18" height="9" rx="3" fill="${d}"/><rect x="15" y="22" width="30" height="49" rx="10" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="21" y="36" width="18" height="18" rx="4" fill="#fff" opacity=".7"/><rect x="24" y="41" width="12" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  else g=`<rect x="24" y="4" width="12" height="18" rx="5" fill="${d}"/><rect x="18" y="21" width="24" height="50" rx="9" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="22" y="34" width="16" height="20" rx="4" fill="#fff" opacity=".7"/><rect x="25" y="40" width="10" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  return `<svg width="${w}" height="${h}" viewBox="0 0 60 76" aria-hidden="true">${g}</svg>`;
 }
-const artBg=p=>`background:${(p.c||['#EEF1EF'])[0]}`;
+const artBg=p=>`background:${pack(p)[0]}`;
 function dots(yes,total,{size=8,play=false,max=24}={}){
  let n=total,y=yes; if(total>max){n=20;y=Math.round(yes/total*20);}
  let h='';for(let i=0;i<n;i++){h+=`<span class="dot ${i<y?'':'no'}" style="--c:${TONES[(i*3)%8]};--i:${i};--s:${size}px"></span>`;}

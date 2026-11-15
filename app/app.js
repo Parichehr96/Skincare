@@ -71,15 +71,19 @@ const cap=t=>t?t[0].toUpperCase()+t.slice(1):'';
 const notOpenLine=p=>`Reviews for ${KIND_PLURAL[p.kind]||'these products'} aren't open yet. You can keep it on your shelf.`;
 
 /* ---------- Pieces ---------- */
+// Packaging tints: each product keeps a stable tint (picked from its stored colour pair) from the sand and pastel palette.
+const PACK=[['#FBEEE0','#8A5F3C'],['#FAF1E8','#7A5A40'],['#FAE3E3','#8E4A3C'],['#F1E6FC','#5E4A80'],['#E9FBEA','#2E6B3C'],['#F0EEEC','#5A5550'],['#F4E2CF','#7A5A40'],['#F7EDF7','#7A4E6E']];
+const PACK_OF={'#EEF5EF':4,'#F6F1E8':1,'#EEF1F6':5,'#F7EEF0':2,'#F2F0F7':3,'#EEF6F6':7,'#FBF4E6':0,'#F1F1EE':6};
+function pack(p){if(!p.c)return ['#F1EEEB','#7A736C'];let i=PACK_OF[p.c[0]];if(i==null){i=0;for(const ch of p.c[0]+p.c[1])i=(i*31+ch.charCodeAt(0))>>>0;}return PACK[i%PACK.length];}
 function art(p,w=60,h=72){
- const [b,d]=p.c||['#EEF1EF','#7B8A82']; let g='';
+ const [b,d]=pack(p); let g='';
  if(p.shape==='tube') g=`<rect x="15" y="4" width="30" height="6" rx="2.5" fill="${d}" opacity=".35"/><path d="M16 9h28l-3 47H19z" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="22" y="56" width="16" height="15" rx="4" fill="${d}"/><rect x="22" y="22" width="16" height="18" rx="4" fill="#fff" opacity=".7"/><rect x="25" y="27" width="10" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  else if(p.shape==='jar') g=`<rect x="9" y="24" width="42" height="13" rx="5" fill="${d}"/><rect x="7" y="35" width="46" height="31" rx="11" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="18" y="43" width="24" height="14" rx="4" fill="#fff" opacity=".7"/><rect x="22" y="48" width="16" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  else if(p.shape==='pump') g=`<rect x="26" y="4" width="8" height="11" rx="2" fill="${d}"/><rect x="33" y="5" width="12" height="5" rx="2.5" fill="${d}"/><rect x="21" y="14" width="18" height="9" rx="3" fill="${d}"/><rect x="15" y="22" width="30" height="49" rx="10" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="21" y="36" width="18" height="18" rx="4" fill="#fff" opacity=".7"/><rect x="24" y="41" width="12" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  else g=`<rect x="24" y="4" width="12" height="18" rx="5" fill="${d}"/><rect x="18" y="21" width="24" height="50" rx="9" fill="${b}" stroke="${d}" stroke-opacity=".25"/><rect x="22" y="34" width="16" height="20" rx="4" fill="#fff" opacity=".7"/><rect x="25" y="40" width="10" height="2.5" rx="1.2" fill="${d}" opacity=".6"/>`;
  return `<svg width="${w}" height="${h}" viewBox="0 0 60 76" aria-hidden="true">${g}</svg>`;
 }
-const artBg=p=>`background:${(p.c||['#EEF1EF'])[0]}`;
+const artBg=p=>`background:${pack(p)[0]}`;
 function dots(yes,total,{size=8,play=false,max=24}={}){
  let n=total,y=yes; if(total>max){n=20;y=Math.round(yes/total*20);}
  let h='';for(let i=0;i<n;i++){h+=`<span class="dot ${i<y?'':'no'}" style="--c:${TONES[(i*3)%8]};--i:${i};--s:${size}px"></span>`;}
@@ -207,7 +211,7 @@ SCREENS.signin={label:'Sign in',render(){
  if(signin.step==='code') return `${hdr('Check your email',{back:true})}
  <form class="body" id="codeform" novalidate>
   <p style="margin:0">We sent a 6-digit code to <b>${esc(signin.email)}</b>. It works for 10 minutes.</p>
-  ${signin.testCode?`<div class="note butter">${IC.info}<span>Test mode: email isn't set up yet, so here is your code: <b style="letter-spacing:.2em">${esc(signin.testCode)}</b></span></div>`:''}
+  ${signin.testCode?`<div class="note peach">${IC.info}<span>Test mode: email isn't set up yet, so here is your code: <b style="letter-spacing:.2em">${esc(signin.testCode)}</b></span></div>`:''}
   <label class="label" for="code">Code</label>
   <input id="code" class="field codein" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
   <p class="err" id="err" role="alert"></p>
@@ -253,11 +257,11 @@ const INTRO=[
 ];
 function introIll(k){
  const T=TONES;
- if(k==='peers'){let s='';for(let i=0;i<18;i++){const a=i/18*Math.PI*2,r=i%3?78:52;const on=[0,3,6,9,12,15].includes(i);s+=`<circle cx="${110+Math.cos(a)*r}" cy="${100+Math.sin(a)*r}" r="${on?11:8}" fill="${T[(i*3)%8]}" ${on?'stroke="#1F4D3A" stroke-width="3"':''}/>`;}return `<svg width="220" height="200" viewBox="0 0 220 200" aria-hidden="true">${s}<circle cx="110" cy="100" r="22" fill="${T[3]}" stroke="#CDEBD8" stroke-width="5"/></svg>`;}
- if(k==='sources') return `<svg width="230" height="190" viewBox="0 0 230 190" aria-hidden="true"><rect x="70" y="40" width="90" height="110" rx="18" fill="#fff"/><rect x="84" y="58" width="62" height="8" rx="4" fill="#CDEBD8"/><rect x="84" y="74" width="48" height="8" rx="4" fill="#E9F6EE"/><rect x="84" y="90" width="56" height="8" rx="4" fill="#E9F6EE"/><circle cx="40" cy="60" r="24" fill="#DCEBF7"/><path d="M30 60h20M40 50v20" stroke="#1F4A6B" stroke-width="4" stroke-linecap="round"/><circle cx="192" cy="58" r="24" fill="#FBEFD3"/><path d="M182 58l7 7 13-14" stroke="#6A4A10" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="44" cy="140" r="20" fill="#E9F6EE"/><circle cx="190" cy="138" r="20" fill="#CDEBD8"/></svg>`;
- if(k==='fair') return `<svg width="220" height="190" viewBox="0 0 220 190" aria-hidden="true"><path d="M110 30v130M70 160h80" stroke="#1F4D3A" stroke-width="6" stroke-linecap="round"/><path d="M40 60h140" stroke="#1F4D3A" stroke-width="6" stroke-linecap="round"/><path d="M40 60l-22 46h44zM180 60l-22 46h44z" fill="#CDEBD8"/><circle cx="110" cy="30" r="10" fill="#1F4D3A"/></svg>`;
- if(k==='data') return `<svg width="220" height="190" viewBox="0 0 220 190" aria-hidden="true"><path d="M110 22 50 46v42c0 40 26 66 60 80 34-14 60-40 60-80V46z" fill="#CDEBD8"/><rect x="86" y="86" width="48" height="40" rx="10" fill="#1F4D3A"/><path d="M96 86V74a14 14 0 0 1 28 0v12" stroke="#1F4D3A" stroke-width="7" fill="none"/></svg>`;
- return `<svg width="220" height="190" viewBox="0 0 220 190" aria-hidden="true"><rect x="58" y="24" width="104" height="150" rx="22" fill="#fff"/><rect x="74" y="50" width="72" height="22" rx="11" fill="#1F4D3A"/><rect x="74" y="82" width="72" height="22" rx="11" fill="#1F4D3A"/><rect x="74" y="114" width="72" height="22" rx="11" fill="#CDEBD8"/><circle cx="168" cy="40" r="20" fill="#FBEFD3"/><path d="M160 40l6 6 11-12" stroke="#6A4A10" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`;
+ if(k==='peers'){let s='';for(let i=0;i<18;i++){const a=i/18*Math.PI*2,r=i%3?78:52;const on=[0,3,6,9,12,15].includes(i);s+=`<circle cx="${110+Math.cos(a)*r}" cy="${100+Math.sin(a)*r}" r="${on?11:8}" fill="${T[(i*3)%8]}" ${on?'stroke="#3A3A3A" stroke-width="3"':''}/>`;}return `<svg width="220" height="200" viewBox="0 0 220 200" aria-hidden="true">${s}<circle cx="110" cy="100" r="22" fill="${T[3]}" stroke="#EDD0B2" stroke-width="5"/></svg>`;}
+ if(k==='sources') return `<svg width="230" height="190" viewBox="0 0 230 190" aria-hidden="true"><rect x="70" y="40" width="90" height="110" rx="18" fill="#fff"/><rect x="84" y="58" width="62" height="8" rx="4" fill="#EDD0B2"/><rect x="84" y="74" width="48" height="8" rx="4" fill="#FAF1E8"/><rect x="84" y="90" width="56" height="8" rx="4" fill="#FAF1E8"/><circle cx="40" cy="60" r="24" fill="#E4CDFA"/><path d="M30 60h20M40 50v20" stroke="#4E3A6B" stroke-width="4" stroke-linecap="round"/><circle cx="192" cy="58" r="24" fill="#FAE6D1"/><path d="M182 58l7 7 13-14" stroke="#6B4A2E" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="44" cy="140" r="20" fill="#FAF1E8"/><circle cx="190" cy="138" r="20" fill="#EDD0B2"/></svg>`;
+ if(k==='fair') return `<svg width="220" height="190" viewBox="0 0 220 190" aria-hidden="true"><path d="M110 30v130M70 160h80" stroke="#3A3A3A" stroke-width="6" stroke-linecap="round"/><path d="M40 60h140" stroke="#3A3A3A" stroke-width="6" stroke-linecap="round"/><path d="M40 60l-22 46h44zM180 60l-22 46h44z" fill="#EDD0B2"/><circle cx="110" cy="30" r="10" fill="#3A3A3A"/></svg>`;
+ if(k==='data') return `<svg width="220" height="190" viewBox="0 0 220 190" aria-hidden="true"><path d="M110 22 50 46v42c0 40 26 66 60 80 34-14 60-40 60-80V46z" fill="#EDD0B2"/><rect x="86" y="86" width="48" height="40" rx="10" fill="#3A3A3A"/><path d="M96 86V74a14 14 0 0 1 28 0v12" stroke="#3A3A3A" stroke-width="7" fill="none"/></svg>`;
+ return `<svg width="220" height="190" viewBox="0 0 220 190" aria-hidden="true"><rect x="58" y="24" width="104" height="150" rx="22" fill="#fff"/><rect x="74" y="50" width="72" height="22" rx="11" fill="#3A3A3A"/><rect x="74" y="82" width="72" height="22" rx="11" fill="#3A3A3A"/><rect x="74" y="114" width="72" height="22" rx="11" fill="#EDD0B2"/><circle cx="168" cy="40" r="20" fill="#FAE6D1"/><path d="M160 40l6 6 11-12" stroke="#6B4A2E" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`;
 }
 let introI=0;
 SCREENS.intro={label:'How Skin Peers works',render({again}){
@@ -321,13 +325,13 @@ function obFoot(a){
  }
  if(ob.i>=OB.length){
   const p=ob.result;
-  f.innerHTML=`<div class="summary${A}"><span style="font-size:13px;opacity:.85">Your group</span><h3>${esc(TYPE_NAME[p.type])} skin, ${esc(ageLabel(p.age))}</h3><div class="chips"><span class="tag">${esc(obLabel(OB[3],p.sun))}</span><span class="tag">${esc(obLabel(OB[4],p.budget))}</span>${p.concerns.map(c=>`<span class="tag">${esc((CONCERNS.find(x=>x[0]===c)||[c,c])[1])}</span>`).join('')}</div><span style="font-size:14px;color:#D9EEE1">Everything you see is matched to women like you.</span></div><p class="err" id="oberr" role="alert"></p><button class="btn primary${A}" data-a="obfinish" id="obfinish">Show me what works</button>`;return;
+  f.innerHTML=`<div class="summary${A}"><span style="font-size:13px;opacity:.85">Your group</span><h3>${esc(TYPE_NAME[p.type])} skin, ${esc(ageLabel(p.age))}</h3><div class="chips"><span class="tag">${esc(obLabel(OB[3],p.sun))}</span><span class="tag">${esc(obLabel(OB[4],p.budget))}</span>${p.concerns.map(c=>`<span class="tag">${esc((CONCERNS.find(x=>x[0]===c)||[c,c])[1])}</span>`).join('')}</div><span style="font-size:14px;color:#EFEAE5">Everything you see is matched to women like you.</span></div><p class="err" id="oberr" role="alert"></p><button class="btn primary${A}" data-a="obfinish" id="obfinish">Show me what works</button>`;return;
  }
  const s=OB[ob.i];
  if(s.tone){
   f.innerHTML=`<div class="swatches${A}" role="group" aria-label="Skin shade">${TONES.map((c,i)=>`<button class="swatch" style="background:${c}" data-a="obtone" data-v="${i+1}" aria-label="Shade ${i+1} of 8${i===0?', lightest':i===7?', deepest':''}"></button>`).join('')}</div><div class="row" style="justify-content:space-between"><span class="pmeta">Lightest</span><span class="pmeta">Deepest</span></div><button class="btn line small" data-a="obtone" data-v="">I'd rather not say</button>`;return;
  }
- f.innerHTML=`<div class="chips${A}">${s.opts.map(([v,l])=>`<button class="chip" data-a="obpick" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</div>${s.help?`<button class="helpbtn${A}" data-a="skintest">Not sure? Try the 1-minute skin test tonight</button>`:''}`;
+ f.innerHTML=`<div class="chips${A}">${s.opts.map(([v,l])=>`<button class="chip${s.k==='type'?' t-'+esc(v):''}" data-a="obpick" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</div>${s.help?`<button class="helpbtn${A}" data-a="skintest">Not sure? Try the 1-minute skin test tonight</button>`:''}`;
 }
 function obPick(v){
  const s=OB[ob.i]; ob.ans[s.k]=v; $('#obfoot').innerHTML='';
@@ -395,8 +399,8 @@ function msgHTML(m,a){
   case 'text': return `<div class="msg${A}"><div class="bub">${esc(m.text)}</div></div>`;
   case 'products': return `<div class="msg wide${A}"><div class="list">${(m.items||[]).map(p=>pcard(p)).join('')}</div></div>`;
   case 'chips': return m.used?'':`<div class="chips${A}" data-chips>${m.chips.map(c=>`<button class="chip" data-a="chip" data-v="${esc(c)}">${esc(c)}</button>`).join('')}</div>`;
-  case 'scan': return `<div class="msg wide${A}"><div class="note sky" style="align-items:center"><span style="flex:1">Scan what you use now, and I'll show you what women like you think of it.</span><button class="btn primary small" data-a="startscan">${IC.scan}Scan</button></div></div>`;
-  case 'safety': return `<div class="msg wide${A}"><div class="stat" style="gap:8px"><span style="font-weight:700;font-size:15px">Where to go</span><a href="https://www.thuisarts.nl" target="_blank" rel="noopener" style="font-weight:600;display:inline-flex;gap:6px;align-items:center">Thuisarts.nl: information on skin complaints ${IC.ext}</a><span style="font-size:14px">Call your huisarts. Swelling of the face or trouble breathing: call 112.</span></div><div class="note butter">${IC.shield}<span>What you write about symptoms isn't saved to your profile.</span></div></div>`;
+  case 'scan': return `<div class="msg wide${A}"><div class="note lilac" style="align-items:center"><span style="flex:1">Scan what you use now, and I'll show you what women like you think of it.</span><button class="btn primary small" data-a="startscan">${IC.scan}Scan</button></div></div>`;
+  case 'safety': return `<div class="msg wide${A}"><div class="stat" style="gap:8px"><span style="font-weight:700;font-size:15px">Where to go</span><a href="https://www.thuisarts.nl" target="_blank" rel="noopener" style="font-weight:600;display:inline-flex;gap:6px;align-items:center">Thuisarts.nl: information on skin complaints ${IC.ext}</a><span style="font-size:14px">Call your huisarts. Swelling of the face or trouble breathing: call 112.</span></div><div class="note peach">${IC.shield}<span>What you write about symptoms isn't saved to your profile.</span></div></div>`;
   case 'action': return `<div class="msg wide${A}"><button class="btn ${m.style||'soft'} small" data-a="${esc(m.act)}" data-id="${esc(m.id||'')}">${esc(m.label)}</button></div>`;
   case 'error': return `<div class="msg${A}"><div class="bub" style="background:var(--rose);color:var(--rose-ink)">${esc(m.text)}</div></div>`;
  }
@@ -498,10 +502,10 @@ function brkLine(b){
  if(!b||!b.of) return '';
  const who=b.who==='peer'?'women like you':'reviewers';
  if(b.of<10) return `<div class="kv"><span>Breakouts</span><b style="font-weight:500;color:var(--muted)">Too few reviews to say</b></div>`;
- const r=b.n/b.of; const col=r>=.15?'var(--butter-ink)':r<=.06?'var(--forest)':'var(--ink)';
+ const r=b.n/b.of; const col=r>=.15?'var(--rose-ink)':r<=.06?'var(--mint-ink)':'var(--ink)';
  return `<div class="kv"><span>Said it broke them out</span><b style="color:${col}">${b.n} of ${b.of} ${who}</b></div>`;
 }
-function flagRow(label,v,good){const txt=v===true?'Yes':v===false?'No':'Not listed';const ok=v==null||good==null?'':((v===good)?' style="color:var(--forest)"':' style="color:var(--butter-ink)"');return `<div class="kv"><span>${label}</span><b${ok}>${txt}</b></div>`;}
+function flagRow(label,v,good){const txt=v===true?'Yes':v===false?'No':'Not listed';const ok=v==null||good==null?'':((v===good)?' style="color:var(--mint-ink)"':' style="color:var(--rose-ink)"');return `<div class="kv"><span>${label}</span><b${ok}>${txt}</b></div>`;}
 function title1(t){return esc(/[a-z]/.test(t)?t:t.toLowerCase().replace(/(^|[\s\-/(])([a-z])/g,(m,x,y)=>x+y.toUpperCase()));}
 function evidenceCard(p,st){
  const b=p.basis;
@@ -523,14 +527,14 @@ function kindRows(p){
  if(f.benzoylPeroxide) h+=`<div class="kv"><span>Benzoyl peroxide</span><b>Yes</b></div>`;
  h+=list('azelaic','Azelaic acid')+list('vitaminC','Vitamin C');
  const sf=f.surfactants;
- if(p.kind==='cleanser'&&sf&&(sf.strong.length||sf.mild.length)) h+=`<div class="kv"><span>Cleansing agents</span><b style="font-weight:500;text-align:right">${sf.strong.length?`<span style="color:var(--butter-ink)">${sf.strong.map(esc).join(', ')} (strong)</span>${sf.mild.length?', ':''}`:''}${sf.mild.length?`${sf.mild.map(esc).join(', ')} (milder)`:''}</b></div>`;
+ if(p.kind==='cleanser'&&sf&&(sf.strong.length||sf.mild.length)) h+=`<div class="kv"><span>Cleansing agents</span><b style="font-weight:500;text-align:right">${sf.strong.length?`<span style="color:var(--rose-ink)">${sf.strong.map(esc).join(', ')} (strong)</span>${sf.mild.length?', ':''}`:''}${sf.mild.length?`${sf.mild.map(esc).join(', ')} (milder)`:''}</b></div>`;
  const hints=(p.hints||[]).slice();
  if(!hints.length&&(f.acids||[]).length) hints.push('Acids and retinoids used together can irritate.');
  if(hints.length) h+=`<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${hints.map(t=>`<span class="reason warn">${IC.info}${esc(t)}</span>`).join('')}<span class="pmeta">Hints from the ingredient list, not promises: amounts aren't on the label.</span></div>`;
  return h;
 }
 function notOpenCard(p){
- return `<div class="note sky" style="flex-direction:column;gap:6px">${IC.info}<span>${esc(notOpenLine(p))}</span><span class="pmeta">Below is what the ingredient list, the brand and the shops say.</span></div>`;
+ return `<div class="note lilac" style="flex-direction:column;gap:6px">${IC.info}<span>${esc(notOpenLine(p))}</span><span class="pmeta">Below is what the ingredient list, the brand and the shops say.</span></div>`;
 }
 function productHTML(d,v){
  const p=d.product, st=d.stats; const s=v==='peer'?st.peer:st.all; const f=p.flags||{};
@@ -553,7 +557,7 @@ function productHTML(d,v){
   <div class="stat" style="gap:0;padding:6px 18px"><span class="label" style="padding-top:10px">From the ingredient list</span>
    ${p.cat==='sun'?`<div class="kv"><span>Filters</span><b>${f.filters?esc(f.filters[0].toUpperCase()+f.filters.slice(1)):'Not listed'}</b></div>`:''}
    ${flagRow('Fragrance',f.fragrance,false)}${flagRow('Drying alcohol',f.dryingAlcohol,false)}${p.cat==='moist'?flagRow('Retinol',f.retinol,null):p.cat==='sun'?flagRow('Tinted',f.tinted,null):''}
-   <div class="kv"><span>On pore-clogging lists</span>${pore==null?'<b style="font-weight:500;color:var(--muted)">Not checked yet</b>':pore.length?`<b style="color:var(--butter-ink);text-align:right">${pore.map(title1).join(', ')}</b>`:'<b style="color:var(--forest)">None found</b>'}</div>
+   <div class="kv"><span>On pore-clogging lists</span>${pore==null?'<b style="font-weight:500;color:var(--muted)">Not checked yet</b>':pore.length?`<b style="color:var(--rose-ink);text-align:right">${pore.map(title1).join(', ')}</b>`:'<b style="color:var(--mint-ink)">None found</b>'}</div>
    ${p.actives&&p.actives.length?`<div class="kv"><span>Notable ingredients</span><b style="font-weight:500;text-align:right">${p.actives.map(esc).join(', ')}</b></div>`:''}
    ${pore&&pore.length?`<p class="pmeta" style="margin:8px 0 0">These ingredients show up on common pore-clogging lists, which come mostly from old lab tests on single ingredients. How a whole product behaves on your skin varies${shelfOnly(p)?'.':', so check what women like you report too.'}</p>`:''}
    ${kindRows(p)}
@@ -562,7 +566,7 @@ function productHTML(d,v){
   ${p.claims&&p.claims.length?`<div class="stat" style="gap:8px"><span class="label">What the brand says</span><div class="chips">${p.claims.map(c=>`<span class="tag grey">${esc(c)}</span>`).join('')}</div><span class="pmeta">From the product description. These are the brand's claims, not checked by us or by women here.</span></div>`:''}
   ${ext.length?`<div class="stat" style="gap:0;padding:6px 18px"><span class="label" style="padding-top:10px">Ratings on other sites</span>${ext.map(e=>`<div class="kv"><span>${esc(e.source)}</span><b>${String(e.rating).replace('.',',')} out of 5 · ${e.n} ratings</b></div>`).join('')}<p class="pmeta" style="margin:8px 0 10px">The shops' own star ratings, all skin types, as shown on ${esc(fmtDate(ext[0].date))}. We don't copy their reviews.</p></div>`:''}
   ${p.similarList&&p.similarList.length?`<div class="stat" style="gap:8px"><span class="label">Similar formulas</span>${p.similarList.map(x=>`<button class="simrow" data-a="product" data-id="${esc(x.id)}"><span>${esc(x.name)}</span><span class="pmeta">${x.same?'Same formula':'Very similar ingredients'}${x.price!=null?' · '+eur(x.price):''}${x.reviews?' · '+x.reviews+' reviews':''}</span></button>`).join('')}<span class="pmeta">Matched on the ingredient list: the same ingredients in nearly the same order.</span></div>`:''}
-  <div class="note butter">${IC.info}<span><b>Independent tests.</b> None on file for this product yet. We're adding independent tests as we find them.</span></div>
+  <div class="note peach">${IC.info}<span><b>Independent tests.</b> None on file for this product yet. We're adding independent tests as we find them.</span></div>
   <div class="stat" style="gap:0;padding:6px 18px"><span class="label" style="padding-top:10px">Where to buy</span>${(p.shops||[]).map((s,i)=>`<div class="shoprow"><span>${esc(s.shop)}${s.online===false?' <span class="pmeta">(in shops only)</span>':''}</span><span class="price">${s.price!=null?eur(s.price):''}${s.was?`<s>${eur(s.was)}</s>`:''}</span></div>`).join('')}</div>
   <p class="fine" style="margin:0">Prices as shown on ${esc(fmtDate(p.checked))} and may have changed. No shop or brand pays for its place here.</p>`;
 }
@@ -571,7 +575,7 @@ function fmtDate(iso){try{return new Date(iso+'T12:00:00').toLocaleDateString('e
 function reviewsSheet(id){
  const d=S.cache['d:'+id]; if(!d) return;
  const items=d.reviews.map(r=>`<div class="stat" style="gap:6px;padding:14px 16px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span class="tag ${r.again==='n'?'grey':''}">${r.again==='y'?'Would buy again':r.again==='m'?'Maybe':'Wouldn\'t buy again'}</span><span class="pmeta">${esc(r.who)}${r.like?', like you':''}${r.stage==='l'?', 3+ weeks':''}</span></div><span>${esc(r.note)}</span>${r.sample?'<span class="samplebadge" style="align-self:flex-start">Sample review</span>':''}</div>`).join('');
- const lock=d.locked?`<div class="note sky" style="flex-direction:column;gap:10px">${IC.lock}<span>These reviews come from women like you. Share how one product you use works for you (3 taps), and you'll see all ${d.totalNotes} of them.</span><div class="row" style="align-self:flex-start"><button class="btn primary small" data-a="unlockflow">Review a product</button><button class="btn line small" data-a="whyunlock">Why?</button></div></div>`:'';
+ const lock=d.locked?`<div class="note lilac" style="flex-direction:column;gap:10px">${IC.lock}<span>These reviews come from women like you. Share how one product you use works for you (3 taps), and you'll see all ${d.totalNotes} of them.</span><div class="row" style="align-self:flex-start"><button class="btn primary small" data-a="unlockflow">Review a product</button><button class="btn line small" data-a="whyunlock">Why?</button></div></div>`:'';
  openSheet('What they wrote',items+lock);
 }
 /* ---------- Shelf helpers ---------- */
@@ -585,7 +589,7 @@ const daysSince=iso=>Math.max(0,(Date.now()-new Date(iso).getTime())/864e5);
 function lifeLeft(it){const p=S.cache[it.pid];const ml=p&&parseFloat(String(p.size||'').replace(',','.'));const perDay=(p&&p.cat==='sun')?1.2:0.6;const days=ml?ml/perDay:60;return Math.max(0,1-daysSince(it.since)/days);}
 function dueCheckin(it){if(it.status!=='using'||shelfOnly(itemProduct(it)))return null;const d=daysSince(it.since);if(!it.reviewed.early&&d>=5)return'early';if(!it.reviewed.late&&d>=28)return'late';return null;}
 function itemName(it){return it.name||(S.cache[it.pid]&&S.cache[it.pid].name)||it.pid;}
-function itemProduct(it){return S.cache[it.pid]||{id:it.pid,name:it.name||it.pid,cat:it.cat||'moist',shape:'tube',c:['#EEF1EF','#7B8A82'],custom:true};}
+function itemProduct(it){return S.cache[it.pid]||{id:it.pid,name:it.name||it.pid,cat:it.cat||'moist',shape:'tube',c:['#F1EEEB','#7A736C'],custom:true};}
 async function ensureCatalogue(){if(!S.cache._all){const j=await api('products',{query:{limit:'200'}});j.products.forEach(p=>S.cache[p.id]=p);S.cache._all=true;}await ensureShelfCards();}
 // Shelf items outside the top of Matches (and every shelf-only kind) are looked up by id.
 async function ensureShelfCards(){const miss=S.shelf.map(x=>x.pid).filter(id=>!S.cache[id]&&!id.startsWith('x-'));if(!miss.length)return;const j=await api('find',{query:{ids:miss.slice(0,100).join(','),limit:'100'}});j.products.forEach(p=>S.cache[p.id]=p);}
@@ -610,7 +614,7 @@ SCREENS.scan={label:'Scan your products',render(){
   <button class="btn line small" data-a="searchname">${IC.search}Search by name</button>
   <span class="label" id="addedlabel">${scanAdded.length?`Added, ${scanAdded.length}`:'Nothing added yet'}</span>
   <div class="list" id="scanlist">${scanAdded.map(pid=>scanRow(pid)).join('')}</div>
-  <div class="note sky">${IC.lock}<span>Tell us how one of them works for you (three taps) and you'll see what women like you think of everything.</span></div>
+  <div class="note lilac">${IC.lock}<span>Tell us how one of them works for you (three taps) and you'll see what women like you think of everything.</span></div>
  </div>
  <div class="foot"><button class="btn primary" data-a="tab" data-t="matches">See matches for your skin</button><button class="btn line" data-a="reviewone" ${scanAdded.length?'':'disabled'} id="reviewone">Review one now</button></div>`;
 },mount(){
@@ -708,7 +712,7 @@ async function identifyPhoto(blob){
 /* ---------- Shelf ---------- */
 SCREENS.shelf={tab:'shelf',label:'My shelf',render(){
  const right=`<button class="btn primary small" data-a="startscan" style="margin-right:4px">${IC.plus}Add</button>`;
- if(!S.shelf.length) return `${hdr('My shelf',{right})}<div class="body"><div class="empty" style="padding-top:60px"><svg width="96" height="80" viewBox="0 0 96 80" aria-hidden="true"><rect x="6" y="66" width="84" height="6" rx="3" fill="#CDEBD8"/><rect x="18" y="30" width="18" height="36" rx="6" fill="#DCEBF7"/><rect x="42" y="18" width="16" height="48" rx="6" fill="#FBEFD3"/><rect x="64" y="38" width="20" height="28" rx="8" fill="#E9F6EE"/></svg><h3>Your shelf is empty</h3><span>Add the products you use now. You'll see what women like you think of them, and get a nudge before they run out.</span><button class="btn primary" data-a="startscan" style="margin-top:6px">${IC.scan}Add my first product</button></div></div>`;
+ if(!S.shelf.length) return `${hdr('My shelf',{right})}<div class="body"><div class="empty" style="padding-top:60px"><svg width="96" height="80" viewBox="0 0 96 80" aria-hidden="true"><rect x="6" y="66" width="84" height="6" rx="3" fill="#EDD0B2"/><rect x="18" y="30" width="18" height="36" rx="6" fill="#E4CDFA"/><rect x="42" y="18" width="16" height="48" rx="6" fill="#FAE6D1"/><rect x="64" y="38" width="20" height="28" rx="8" fill="#FAF1E8"/></svg><h3>Your shelf is empty</h3><span>Add the products you use now. You'll see what women like you think of them, and get a nudge before they run out.</span><button class="btn primary" data-a="startscan" style="margin-top:6px">${IC.scan}Add my first product</button></div></div>`;
  return `${hdr('My shelf',{right})}<div class="body" id="shelfbody">${spinner()}</div>`;
 },mount(){if(!S.shelf.length)return;ensureCatalogue().then(()=>{const b=$('#shelfbody');if(b)b.innerHTML=shelfHTML();}).catch(e=>{const b=$('#shelfbody');if(b)b.innerHTML=errorBox(e,'');});}};
 function shelfHTML(){
@@ -718,11 +722,11 @@ function shelfHTML(){
  const low=using.find(x=>reviewable(itemProduct(x))&&lifeLeft(x)<0.15);
  let h='';
  if(due){const [it,stage]=due;h+=`<div class="note mint" style="flex-direction:column;gap:10px"><span>${stage==='early'?`You've had the ${esc(itemName(it))} for ${Math.floor(daysSince(it.since))} days. First impressions?`:`You've used the ${esc(itemName(it))} for a few weeks now. How is it going?`}</span><button class="btn primary small" data-a="checkin" data-id="${esc(it.pid)}" data-stage="${stage}" style="align-self:flex-start">Quick check-in</button></div>`;}
- else if(first){h+=`<div class="note sky" style="flex-direction:column;gap:10px">${IC.lock}<span>Review one product you use, in three taps, to see every review.</span><button class="btn primary small" data-a="checkin" data-id="${esc(first.pid)}" data-stage="early" style="align-self:flex-start">Review ${esc(itemName(first))}</button></div>`;}
- if(low) h+=`<div class="note butter" style="flex-direction:column;gap:10px"><span style="display:flex;gap:10px">${IC.bell}<span>Your ${esc(itemName(low))} is probably running low.</span></span><button class="btn line small" data-a="runout" data-id="${esc(low.pid)}" style="align-self:flex-start">Rebuy or switch</button></div>`;
+ else if(first){h+=`<div class="note lilac" style="flex-direction:column;gap:10px">${IC.lock}<span>Review one product you use, in three taps, to see every review.</span><button class="btn primary small" data-a="checkin" data-id="${esc(first.pid)}" data-stage="early" style="align-self:flex-start">Review ${esc(itemName(first))}</button></div>`;}
+ if(low) h+=`<div class="note peach" style="flex-direction:column;gap:10px"><span style="display:flex;gap:10px">${IC.bell}<span>Your ${esc(itemName(low))} is probably running low.</span></span><button class="btn line small" data-a="runout" data-id="${esc(low.pid)}" style="align-self:flex-start">Rebuy or switch</button></div>`;
  if(using.length) h+=`<span class="label">Using now</span><div class="list">${using.map(shelfRow).join('')}</div>`;
  if(stopped.length) h+=`<span class="label">Stopped using</span><div class="list">${stopped.map(shelfRow).join('')}</div>`;
- h+=`<div class="note sky">${IC.shield}<span>Your reviews show only your skin type, age group and skin tone, never your name or email.</span></div>`;
+ h+=`<div class="note lilac">${IC.shield}<span>Your reviews show only your skin type, age group and skin tone, never your name or email.</span></div>`;
  return h;
 }
 function shelfRow(it){
@@ -751,7 +755,7 @@ SCREENS.checkin={label:'Check-in',render({id,stage}){
   <label for="cknote" class="label">Tell women like you in your own words (optional)</label>
   <input id="cknote" class="field" maxlength="300" value="${esc(ck.note)}" placeholder="What would you tell a friend?">
   <p class="pmeta" style="margin:0">Shown with your skin type and age group only. Please don't add names or health details.</p>
-  <div class="note ${stings?'rose':'butter'}">${IC.alert}<span>${stings?'<b>Stinging that doesn\'t stop?</b> Stop using it. Swelling or a rash that spreads: contact your huisarts.':'Reaction that worries you, like swelling or a rash that spreads? Stop using it and contact your huisarts.'} <a href="#" data-a="medical">More about this</a></span></div>
+  <div class="note ${stings?'rose':'peach'}">${IC.alert}<span>${stings?'<b>Stinging that doesn\'t stop?</b> Stop using it. Swelling or a rash that spreads: contact your huisarts.':'Reaction that worries you, like swelling or a rash that spreads? Stop using it and contact your huisarts.'} <a href="#" data-a="medical">More about this</a></span></div>
   <p class="err" id="ckerr" role="alert"></p>
  </div>
  <div class="foot"><button class="btn primary" data-a="cksave" id="cksave" ${ck.again&&ck.feel.length?'':'disabled'}>${S.user.unlocked?'Save review':'Save, and unlock all reviews'}</button></div>`;
@@ -768,7 +772,7 @@ SCREENS.me={tab:'me',label:'Me',render(){
  const p=prof()||{};
  return `${hdr('Me')}
  <div class="body">
-  <div class="profile"><span style="font-size:13px;font-weight:600">Your group</span><h2>${esc(TYPE_NAME[p.type]||'')} skin, ${esc(ageLabel(p.age))}</h2><div class="chips">${p.tone?`<span class="tag" style="background:#fff;gap:6px"><i style="width:12px;height:12px;border-radius:50%;background:${TONES[p.tone-1]};box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)"></i>Shade ${p.tone}</span>`:''}<span class="tag" style="background:#fff">${esc((SUN_OPTS.find(x=>x[0]===p.sun)||['',''])[1])}</span><span class="tag" style="background:#fff">${esc((BUDGET_OPTS.find(x=>x[0]===p.budget)||['',''])[1])}</span>${(p.concerns||[]).map(c=>`<span class="tag" style="background:#fff">${esc((CONCERNS.find(x=>x[0]===c)||[c,c])[1])}</span>`).join('')}</div></div>
+  <div class="profile t-${esc(p.type||'')}"><span style="font-size:13px;font-weight:600">Your group</span><h2>${esc(TYPE_NAME[p.type]||'')} skin, ${esc(ageLabel(p.age))}</h2><div class="chips">${p.tone?`<span class="tag" style="background:#fff;gap:6px"><i style="width:12px;height:12px;border-radius:50%;background:${TONES[p.tone-1]};box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)"></i>Shade ${p.tone}</span>`:''}<span class="tag" style="background:#fff">${esc((SUN_OPTS.find(x=>x[0]===p.sun)||['',''])[1])}</span><span class="tag" style="background:#fff">${esc((BUDGET_OPTS.find(x=>x[0]===p.budget)||['',''])[1])}</span>${(p.concerns||[]).map(c=>`<span class="tag" style="background:#fff">${esc((CONCERNS.find(x=>x[0]===c)||[c,c])[1])}</span>`).join('')}</div></div>
   <div class="group">
    <button class="item" data-a="editskin">${IC.edit}<span class="grow">Change my skin details<small>Answer the questions again</small></span>${IC.chev}</button>
    <button class="item" data-a="howitworks">${IC.info}<span class="grow">How Skin Peers works<small>Matching, sources, money and your data</small></span>${IC.chev}</button>
@@ -806,7 +810,7 @@ const A={
  obconcern:(el)=>{const v=el.dataset.v;const i=ob.concerns.indexOf(v);i>=0?ob.concerns.splice(i,1):ob.concerns.push(v);obFoot(false);},
  obconcernsdone:()=>{if(ob.concerns.length){$('#obthread').insertAdjacentHTML('beforeend',`<div class="msg me anim"><div class="bub">${esc(ob.concerns.map(c=>(CONCERNS.find(x=>x[0]===c)||[c,c])[1]).join(', '))}</div></div>`);}else ob.ans.consent='no';$('#obfoot').innerHTML='';obNext();},
  obfinish:()=>obFinish(),
- skintest:()=>openSheet('1-minute skin test',`<ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px"><li>Wash your face with a mild cleanser in the evening.</li><li>Leave it bare for an hour, with no products.</li><li>Press a clean tissue on your forehead, nose and cheeks.</li></ol><div class="note sky">${IC.info}<span>Oil only on the forehead and nose? That's combination skin. Oil everywhere is oily; none, and feeling tight, is dry.</span></div><button class="btn primary" data-a="closesheet">Got it</button>`),
+ skintest:()=>openSheet('1-minute skin test',`<ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px"><li>Wash your face with a mild cleanser in the evening.</li><li>Leave it bare for an hour, with no products.</li><li>Press a clean tissue on your forehead, nose and cheeks.</li></ol><div class="note lilac">${IC.info}<span>Oil only on the forehead and nose? That's combination skin. Oil everywhere is oily; none, and feeling tight, is dry.</span></div><button class="btn primary" data-a="closesheet">Got it</button>`),
  chip:(el)=>chipAction(el.dataset.v),
  product:(el)=>go('product',{id:el.dataset.id}),
  mcat:(el)=>{if(S.m.cat===el.dataset.v)return;S.m.cat=el.dataset.v;S.m.spf=false;const seg=el.parentElement;seg.classList.toggle('right',S.m.cat==='sun');seg.querySelectorAll('button').forEach(b=>{const on=b.dataset.v===S.m.cat;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);});top().el.querySelector('.hdr h1').firstChild.textContent=(S.m.cat==='sun'?'Sunscreens':'Moisturisers')+' for you';updateMatches();},
@@ -817,7 +821,7 @@ const A={
  askabout:()=>{pendingSay=`Which of these ${S.m.cat==='sun'?'sunscreens':'moisturisers'} is best for me${S.m.max?` under €${S.m.max}`:''}${S.m.shop?` at ${S.m.shop}`:''}?`;go('chat',{},'tab');},
  pview:(el)=>{const t=top();t.params.view=el.dataset.v;refresh();},
  reviews:(el)=>reviewsSheet(el.dataset.id),
- whyunlock:()=>{track('why_unlock');openSheet('How reviews work',`<p style="margin:0">Every review here comes from a woman who uses the product. To keep it that way, everyone shares how one product they use works for them before reading all reviews.</p><div class="note sky">${IC.shield}<span>It takes three taps. Only your skin type, age group and skin tone are shown with it, never your name. And it helps the next woman with skin like yours.</span></div><button class="btn primary" data-a="unlockflow">Review a product</button><button class="btn line" data-a="closesheet">Not now</button>`);},
+ whyunlock:()=>{track('why_unlock');openSheet('How reviews work',`<p style="margin:0">Every review here comes from a woman who uses the product. To keep it that way, everyone shares how one product they use works for them before reading all reviews.</p><div class="note lilac">${IC.shield}<span>It takes three taps. Only your skin type, age group and skin tone are shown with it, never your name. And it helps the next woman with skin like yours.</span></div><button class="btn primary" data-a="unlockflow">Review a product</button><button class="btn line" data-a="closesheet">Not now</button>`);},
  unlockflow:()=>{closeSheet(true);const x=S.shelf.find(s=>s.status==='using'&&!s.reviewed.early&&reviewable(itemProduct(s)));if(x)go('checkin',{id:x.pid,stage:'early'});else go('scan');},
  have:async(el)=>{el.disabled=true;try{await addToShelf(el.dataset.id);toast('Added to your shelf');$('#pfoot')&&($('#pfoot').innerHTML=productFoot(S.cache[el.dataset.id]));}catch(e){el.disabled=false;toast('Couldn\'t add it. Try again.');}},
  buyout:()=>track('buy_click'),
@@ -844,7 +848,7 @@ const A={
   try{const j=await api('review',{method:'POST',body:{pid:ck.id,stage:ck.stage,again:ck.again,feel:ck.feel,extra:ck.extra,note:ck.note,stopped:ck.stopped||undefined}});S.shelf=j.shelf;const first=j.firstUnlock;S.user.unlocked=true;Object.keys(S.cache).filter(k=>k.startsWith('d:')).forEach(k=>delete S.cache[k]);ck=null;celebrate(j.helps,first);}
   catch(e){el.disabled=false;el.textContent='Save review';$('#ckerr').textContent=e.code==='reviews_not_open'?'Reviews for this kind of product aren\'t open yet. It stays on your shelf.':'Couldn\'t save your review. Check your connection and try again.';}},
  celebratedone:()=>{$('#overlay').innerHTML='';go('shelf',{},'tab');},
- medical:(el,e)=>{e&&e.preventDefault();openSheet('When to see your huisarts',`<p style="margin:0">Stop using a product if it burns, swells your skin, or gives you a rash that spreads. Contact your huisarts if it doesn't settle within a few days.</p><div class="note butter">${IC.alert}<span>Swelling of the face, lips or tongue, or trouble breathing: call 112.</span></div><a class="btn line" href="https://www.thuisarts.nl" target="_blank" rel="noopener">Thuisarts.nl ${IC.ext}</a>`);},
+ medical:(el,e)=>{e&&e.preventDefault();openSheet('When to see your huisarts',`<p style="margin:0">Stop using a product if it burns, swells your skin, or gives you a rash that spreads. Contact your huisarts if it doesn't settle within a few days.</p><div class="note peach">${IC.alert}<span>Swelling of the face, lips or tongue, or trouble breathing: call 112.</span></div><a class="btn line" href="https://www.thuisarts.nl" target="_blank" rel="noopener">Thuisarts.nl ${IC.ext}</a>`);},
  editskin:()=>{ob=null;go('onboard');},
  toggleremind:async(el)=>{const v=!S.user.reminders;el.setAttribute('aria-checked',v);try{const j=await api('me',{method:'PUT',body:{reminders:v}});S.user=j.user;toast(v?'Nudges on':'Nudges off');}catch(e){el.setAttribute('aria-checked',!v);}},
  mydata:async()=>{try{const j=await api('me/export');const blob=new Blob([JSON.stringify(j,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='skin-peers-my-data.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);toast('Your data is downloading');}catch(e){toast('Couldn\'t get your data. Try again.');}},

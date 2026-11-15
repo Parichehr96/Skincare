@@ -9,7 +9,7 @@ const daysSince=iso=>Math.max(0,(Date.now()-new Date(iso).getTime())/864e5);
 function lifeLeft(it){const p=S.cache[it.pid];const ml=p&&parseFloat(String(p.size||'').replace(',','.'));const perDay=(p&&p.cat==='sun')?1.2:0.6;const days=ml?ml/perDay:60;return Math.max(0,1-daysSince(it.since)/days);}
 function dueCheckin(it){if(it.status!=='using'||shelfOnly(itemProduct(it)))return null;const d=daysSince(it.since);if(!it.reviewed.early&&d>=5)return'early';if(!it.reviewed.late&&d>=28)return'late';return null;}
 function itemName(it){return it.name||(S.cache[it.pid]&&S.cache[it.pid].name)||it.pid;}
-function itemProduct(it){return S.cache[it.pid]||{id:it.pid,name:it.name||it.pid,cat:it.cat||'moist',shape:'tube',c:['#EEF1EF','#7B8A82'],custom:true};}
+function itemProduct(it){return S.cache[it.pid]||{id:it.pid,name:it.name||it.pid,cat:it.cat||'moist',shape:'tube',c:['#F1EEEB','#7A736C'],custom:true};}
 async function ensureCatalogue(){if(!S.cache._all){const j=await api('products',{query:{limit:'200'}});j.products.forEach(p=>S.cache[p.id]=p);S.cache._all=true;}await ensureShelfCards();}
 // Shelf items outside the top of Matches (and every shelf-only kind) are looked up by id.
 async function ensureShelfCards(){const miss=S.shelf.map(x=>x.pid).filter(id=>!S.cache[id]&&!id.startsWith('x-'));if(!miss.length)return;const j=await api('find',{query:{ids:miss.slice(0,100).join(','),limit:'100'}});j.products.forEach(p=>S.cache[p.id]=p);}
@@ -34,7 +34,7 @@ SCREENS.scan={label:'Scan your products',render(){
   <button class="btn line small" data-a="searchname">${IC.search}Search by name</button>
   <span class="label" id="addedlabel">${scanAdded.length?`Added, ${scanAdded.length}`:'Nothing added yet'}</span>
   <div class="list" id="scanlist">${scanAdded.map(pid=>scanRow(pid)).join('')}</div>
-  <div class="note sky">${IC.lock}<span>Tell us how one of them works for you (three taps) and you'll see what women like you think of everything.</span></div>
+  <div class="note lilac">${IC.lock}<span>Tell us how one of them works for you (three taps) and you'll see what women like you think of everything.</span></div>
  </div>
  <div class="foot"><button class="btn primary" data-a="tab" data-t="matches">See matches for your skin</button><button class="btn line" data-a="reviewone" ${scanAdded.length?'':'disabled'} id="reviewone">Review one now</button></div>`;
 },mount(){
@@ -132,7 +132,7 @@ async function identifyPhoto(blob){
 /* ---------- Shelf ---------- */
 SCREENS.shelf={tab:'shelf',label:'My shelf',render(){
  const right=`<button class="btn primary small" data-a="startscan" style="margin-right:4px">${IC.plus}Add</button>`;
- if(!S.shelf.length) return `${hdr('My shelf',{right})}<div class="body"><div class="empty" style="padding-top:60px"><svg width="96" height="80" viewBox="0 0 96 80" aria-hidden="true"><rect x="6" y="66" width="84" height="6" rx="3" fill="#CDEBD8"/><rect x="18" y="30" width="18" height="36" rx="6" fill="#DCEBF7"/><rect x="42" y="18" width="16" height="48" rx="6" fill="#FBEFD3"/><rect x="64" y="38" width="20" height="28" rx="8" fill="#E9F6EE"/></svg><h3>Your shelf is empty</h3><span>Add the products you use now. You'll see what women like you think of them, and get a nudge before they run out.</span><button class="btn primary" data-a="startscan" style="margin-top:6px">${IC.scan}Add my first product</button></div></div>`;
+ if(!S.shelf.length) return `${hdr('My shelf',{right})}<div class="body"><div class="empty" style="padding-top:60px"><svg width="96" height="80" viewBox="0 0 96 80" aria-hidden="true"><rect x="6" y="66" width="84" height="6" rx="3" fill="#EDD0B2"/><rect x="18" y="30" width="18" height="36" rx="6" fill="#E4CDFA"/><rect x="42" y="18" width="16" height="48" rx="6" fill="#FAE6D1"/><rect x="64" y="38" width="20" height="28" rx="8" fill="#FAF1E8"/></svg><h3>Your shelf is empty</h3><span>Add the products you use now. You'll see what women like you think of them, and get a nudge before they run out.</span><button class="btn primary" data-a="startscan" style="margin-top:6px">${IC.scan}Add my first product</button></div></div>`;
  return `${hdr('My shelf',{right})}<div class="body" id="shelfbody">${spinner()}</div>`;
 },mount(){if(!S.shelf.length)return;ensureCatalogue().then(()=>{const b=$('#shelfbody');if(b)b.innerHTML=shelfHTML();}).catch(e=>{const b=$('#shelfbody');if(b)b.innerHTML=errorBox(e,'');});}};
 function shelfHTML(){
@@ -142,11 +142,11 @@ function shelfHTML(){
  const low=using.find(x=>reviewable(itemProduct(x))&&lifeLeft(x)<0.15);
  let h='';
  if(due){const [it,stage]=due;h+=`<div class="note mint" style="flex-direction:column;gap:10px"><span>${stage==='early'?`You've had the ${esc(itemName(it))} for ${Math.floor(daysSince(it.since))} days. First impressions?`:`You've used the ${esc(itemName(it))} for a few weeks now. How is it going?`}</span><button class="btn primary small" data-a="checkin" data-id="${esc(it.pid)}" data-stage="${stage}" style="align-self:flex-start">Quick check-in</button></div>`;}
- else if(first){h+=`<div class="note sky" style="flex-direction:column;gap:10px">${IC.lock}<span>Review one product you use, in three taps, to see every review.</span><button class="btn primary small" data-a="checkin" data-id="${esc(first.pid)}" data-stage="early" style="align-self:flex-start">Review ${esc(itemName(first))}</button></div>`;}
- if(low) h+=`<div class="note butter" style="flex-direction:column;gap:10px"><span style="display:flex;gap:10px">${IC.bell}<span>Your ${esc(itemName(low))} is probably running low.</span></span><button class="btn line small" data-a="runout" data-id="${esc(low.pid)}" style="align-self:flex-start">Rebuy or switch</button></div>`;
+ else if(first){h+=`<div class="note lilac" style="flex-direction:column;gap:10px">${IC.lock}<span>Review one product you use, in three taps, to see every review.</span><button class="btn primary small" data-a="checkin" data-id="${esc(first.pid)}" data-stage="early" style="align-self:flex-start">Review ${esc(itemName(first))}</button></div>`;}
+ if(low) h+=`<div class="note peach" style="flex-direction:column;gap:10px"><span style="display:flex;gap:10px">${IC.bell}<span>Your ${esc(itemName(low))} is probably running low.</span></span><button class="btn line small" data-a="runout" data-id="${esc(low.pid)}" style="align-self:flex-start">Rebuy or switch</button></div>`;
  if(using.length) h+=`<span class="label">Using now</span><div class="list">${using.map(shelfRow).join('')}</div>`;
  if(stopped.length) h+=`<span class="label">Stopped using</span><div class="list">${stopped.map(shelfRow).join('')}</div>`;
- h+=`<div class="note sky">${IC.shield}<span>Your reviews show only your skin type, age group and skin tone, never your name or email.</span></div>`;
+ h+=`<div class="note lilac">${IC.shield}<span>Your reviews show only your skin type, age group and skin tone, never your name or email.</span></div>`;
  return h;
 }
 function shelfRow(it){
@@ -175,7 +175,7 @@ SCREENS.checkin={label:'Check-in',render({id,stage}){
   <label for="cknote" class="label">Tell women like you in your own words (optional)</label>
   <input id="cknote" class="field" maxlength="300" value="${esc(ck.note)}" placeholder="What would you tell a friend?">
   <p class="pmeta" style="margin:0">Shown with your skin type and age group only. Please don't add names or health details.</p>
-  <div class="note ${stings?'rose':'butter'}">${IC.alert}<span>${stings?'<b>Stinging that doesn\'t stop?</b> Stop using it. Swelling or a rash that spreads: contact your huisarts.':'Reaction that worries you, like swelling or a rash that spreads? Stop using it and contact your huisarts.'} <a href="#" data-a="medical">More about this</a></span></div>
+  <div class="note ${stings?'rose':'peach'}">${IC.alert}<span>${stings?'<b>Stinging that doesn\'t stop?</b> Stop using it. Swelling or a rash that spreads: contact your huisarts.':'Reaction that worries you, like swelling or a rash that spreads? Stop using it and contact your huisarts.'} <a href="#" data-a="medical">More about this</a></span></div>
   <p class="err" id="ckerr" role="alert"></p>
  </div>
  <div class="foot"><button class="btn primary" data-a="cksave" id="cksave" ${ck.again&&ck.feel.length?'':'disabled'}>${S.user.unlocked?'Save review':'Save, and unlock all reviews'}</button></div>`;
@@ -192,7 +192,7 @@ SCREENS.me={tab:'me',label:'Me',render(){
  const p=prof()||{};
  return `${hdr('Me')}
  <div class="body">
-  <div class="profile"><span style="font-size:13px;font-weight:600">Your group</span><h2>${esc(TYPE_NAME[p.type]||'')} skin, ${esc(ageLabel(p.age))}</h2><div class="chips">${p.tone?`<span class="tag" style="background:#fff;gap:6px"><i style="width:12px;height:12px;border-radius:50%;background:${TONES[p.tone-1]};box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)"></i>Shade ${p.tone}</span>`:''}<span class="tag" style="background:#fff">${esc((SUN_OPTS.find(x=>x[0]===p.sun)||['',''])[1])}</span><span class="tag" style="background:#fff">${esc((BUDGET_OPTS.find(x=>x[0]===p.budget)||['',''])[1])}</span>${(p.concerns||[]).map(c=>`<span class="tag" style="background:#fff">${esc((CONCERNS.find(x=>x[0]===c)||[c,c])[1])}</span>`).join('')}</div></div>
+  <div class="profile t-${esc(p.type||'')}"><span style="font-size:13px;font-weight:600">Your group</span><h2>${esc(TYPE_NAME[p.type]||'')} skin, ${esc(ageLabel(p.age))}</h2><div class="chips">${p.tone?`<span class="tag" style="background:#fff;gap:6px"><i style="width:12px;height:12px;border-radius:50%;background:${TONES[p.tone-1]};box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)"></i>Shade ${p.tone}</span>`:''}<span class="tag" style="background:#fff">${esc((SUN_OPTS.find(x=>x[0]===p.sun)||['',''])[1])}</span><span class="tag" style="background:#fff">${esc((BUDGET_OPTS.find(x=>x[0]===p.budget)||['',''])[1])}</span>${(p.concerns||[]).map(c=>`<span class="tag" style="background:#fff">${esc((CONCERNS.find(x=>x[0]===c)||[c,c])[1])}</span>`).join('')}</div></div>
   <div class="group">
    <button class="item" data-a="editskin">${IC.edit}<span class="grow">Change my skin details<small>Answer the questions again</small></span>${IC.chev}</button>
    <button class="item" data-a="howitworks">${IC.info}<span class="grow">How Skin Peers works<small>Matching, sources, money and your data</small></span>${IC.chev}</button>
@@ -230,7 +230,7 @@ const A={
  obconcern:(el)=>{const v=el.dataset.v;const i=ob.concerns.indexOf(v);i>=0?ob.concerns.splice(i,1):ob.concerns.push(v);obFoot(false);},
  obconcernsdone:()=>{if(ob.concerns.length){$('#obthread').insertAdjacentHTML('beforeend',`<div class="msg me anim"><div class="bub">${esc(ob.concerns.map(c=>(CONCERNS.find(x=>x[0]===c)||[c,c])[1]).join(', '))}</div></div>`);}else ob.ans.consent='no';$('#obfoot').innerHTML='';obNext();},
  obfinish:()=>obFinish(),
- skintest:()=>openSheet('1-minute skin test',`<ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px"><li>Wash your face with a mild cleanser in the evening.</li><li>Leave it bare for an hour, with no products.</li><li>Press a clean tissue on your forehead, nose and cheeks.</li></ol><div class="note sky">${IC.info}<span>Oil only on the forehead and nose? That's combination skin. Oil everywhere is oily; none, and feeling tight, is dry.</span></div><button class="btn primary" data-a="closesheet">Got it</button>`),
+ skintest:()=>openSheet('1-minute skin test',`<ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px"><li>Wash your face with a mild cleanser in the evening.</li><li>Leave it bare for an hour, with no products.</li><li>Press a clean tissue on your forehead, nose and cheeks.</li></ol><div class="note lilac">${IC.info}<span>Oil only on the forehead and nose? That's combination skin. Oil everywhere is oily; none, and feeling tight, is dry.</span></div><button class="btn primary" data-a="closesheet">Got it</button>`),
  chip:(el)=>chipAction(el.dataset.v),
  product:(el)=>go('product',{id:el.dataset.id}),
  mcat:(el)=>{if(S.m.cat===el.dataset.v)return;S.m.cat=el.dataset.v;S.m.spf=false;const seg=el.parentElement;seg.classList.toggle('right',S.m.cat==='sun');seg.querySelectorAll('button').forEach(b=>{const on=b.dataset.v===S.m.cat;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);});top().el.querySelector('.hdr h1').firstChild.textContent=(S.m.cat==='sun'?'Sunscreens':'Moisturisers')+' for you';updateMatches();},
@@ -241,7 +241,7 @@ const A={
  askabout:()=>{pendingSay=`Which of these ${S.m.cat==='sun'?'sunscreens':'moisturisers'} is best for me${S.m.max?` under €${S.m.max}`:''}${S.m.shop?` at ${S.m.shop}`:''}?`;go('chat',{},'tab');},
  pview:(el)=>{const t=top();t.params.view=el.dataset.v;refresh();},
  reviews:(el)=>reviewsSheet(el.dataset.id),
- whyunlock:()=>{track('why_unlock');openSheet('How reviews work',`<p style="margin:0">Every review here comes from a woman who uses the product. To keep it that way, everyone shares how one product they use works for them before reading all reviews.</p><div class="note sky">${IC.shield}<span>It takes three taps. Only your skin type, age group and skin tone are shown with it, never your name. And it helps the next woman with skin like yours.</span></div><button class="btn primary" data-a="unlockflow">Review a product</button><button class="btn line" data-a="closesheet">Not now</button>`);},
+ whyunlock:()=>{track('why_unlock');openSheet('How reviews work',`<p style="margin:0">Every review here comes from a woman who uses the product. To keep it that way, everyone shares how one product they use works for them before reading all reviews.</p><div class="note lilac">${IC.shield}<span>It takes three taps. Only your skin type, age group and skin tone are shown with it, never your name. And it helps the next woman with skin like yours.</span></div><button class="btn primary" data-a="unlockflow">Review a product</button><button class="btn line" data-a="closesheet">Not now</button>`);},
  unlockflow:()=>{closeSheet(true);const x=S.shelf.find(s=>s.status==='using'&&!s.reviewed.early&&reviewable(itemProduct(s)));if(x)go('checkin',{id:x.pid,stage:'early'});else go('scan');},
  have:async(el)=>{el.disabled=true;try{await addToShelf(el.dataset.id);toast('Added to your shelf');$('#pfoot')&&($('#pfoot').innerHTML=productFoot(S.cache[el.dataset.id]));}catch(e){el.disabled=false;toast('Couldn\'t add it. Try again.');}},
  buyout:()=>track('buy_click'),
@@ -268,7 +268,7 @@ const A={
   try{const j=await api('review',{method:'POST',body:{pid:ck.id,stage:ck.stage,again:ck.again,feel:ck.feel,extra:ck.extra,note:ck.note,stopped:ck.stopped||undefined}});S.shelf=j.shelf;const first=j.firstUnlock;S.user.unlocked=true;Object.keys(S.cache).filter(k=>k.startsWith('d:')).forEach(k=>delete S.cache[k]);ck=null;celebrate(j.helps,first);}
   catch(e){el.disabled=false;el.textContent='Save review';$('#ckerr').textContent=e.code==='reviews_not_open'?'Reviews for this kind of product aren\'t open yet. It stays on your shelf.':'Couldn\'t save your review. Check your connection and try again.';}},
  celebratedone:()=>{$('#overlay').innerHTML='';go('shelf',{},'tab');},
- medical:(el,e)=>{e&&e.preventDefault();openSheet('When to see your huisarts',`<p style="margin:0">Stop using a product if it burns, swells your skin, or gives you a rash that spreads. Contact your huisarts if it doesn't settle within a few days.</p><div class="note butter">${IC.alert}<span>Swelling of the face, lips or tongue, or trouble breathing: call 112.</span></div><a class="btn line" href="https://www.thuisarts.nl" target="_blank" rel="noopener">Thuisarts.nl ${IC.ext}</a>`);},
+ medical:(el,e)=>{e&&e.preventDefault();openSheet('When to see your huisarts',`<p style="margin:0">Stop using a product if it burns, swells your skin, or gives you a rash that spreads. Contact your huisarts if it doesn't settle within a few days.</p><div class="note peach">${IC.alert}<span>Swelling of the face, lips or tongue, or trouble breathing: call 112.</span></div><a class="btn line" href="https://www.thuisarts.nl" target="_blank" rel="noopener">Thuisarts.nl ${IC.ext}</a>`);},
  editskin:()=>{ob=null;go('onboard');},
  toggleremind:async(el)=>{const v=!S.user.reminders;el.setAttribute('aria-checked',v);try{const j=await api('me',{method:'PUT',body:{reminders:v}});S.user=j.user;toast(v?'Nudges on':'Nudges off');}catch(e){el.setAttribute('aria-checked',!v);}},
  mydata:async()=>{try{const j=await api('me/export');const blob=new Blob([JSON.stringify(j,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='skin-peers-my-data.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);toast('Your data is downloading');}catch(e){toast('Couldn\'t get your data. Try again.');}},

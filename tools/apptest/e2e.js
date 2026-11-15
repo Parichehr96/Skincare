@@ -11,7 +11,7 @@ const shot=async n=>{await p.waitForTimeout(500);await p.screenshot({path:__dirn
 const c=async(sel,w=600)=>{await p.click(sel);await p.waitForTimeout(w);};
 await p.goto('http://localhost:8890/app/');await p.waitForTimeout(1200);await shot('01-welcome');
 await c('[data-a=signin]');await p.fill('#email','pari.test@example.com');await c('#go',1000);
-const code=(await p.textContent('.note.butter b')).trim();await shot('02-code');
+const code=(await p.textContent('.note.peach b')).trim();await shot('02-code');
 await p.fill('#code',code);await p.waitForTimeout(1500);await shot('03-intro1');
 for(let i=0;i<4;i++){await c('[data-a=intronext]',450);} await shot('04-intro5'); await c('[data-a=intronext]',1200);
 await c('[data-a=obpick][data-v="25-34"]',900);await c('[data-a=obpick][data-v="combination"]',900);await shot('05-tone');
